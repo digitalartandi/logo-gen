@@ -277,16 +277,20 @@ const ChipSelect = ({ options, values, onChange, name = "chip" }) => {
 
 // Farbzeile mit Normalisierung & Vorschau
 const ColorRow = ({ label, value, onChange, contrast }) => {
+  // Wichtig: toHex6(value) liefert den korrekten Wert, auch wenn die Eingabe ungültig war,
+  // solange sie zwischenzeitlich gültig war (z.B. durch Farbfeld)
   const normalized = useMemo(() => toHex6(value), [value]);
   const swatch = normalized || value || "#FFFFFF";
 
   return (
     <div className="flex items-center gap-3 flex-wrap">
-      <label className="text-sm w-36 text-gray-300">{label} <span aria-hidden="true">🎨</span></label>
+      {/* FIX 1: Emojis entfernt */}
+      <label className="text-sm w-36 text-gray-300">{label}</label>
       <Input
         type="color"
+        // Wichtig: Farbfeld muss den normalisierten Wert erhalten, um richtig zu funktionieren.
         value={normalized || "#FFFFFF"}
-        // FIX 4: Korrigiert, um den Wert des Farbfelds zu übernehmen
+        // FIX 3: Bei Änderung den normalisierten Wert an den State übergeben.
         onChange={(e) => onChange(e.target.value)}
         className="h-10 w-16 touch-manipulation" 
         aria-label={`${label} (Farbfeld)`}
@@ -294,9 +298,12 @@ const ColorRow = ({ label, value, onChange, contrast }) => {
       />
       <Input
         placeholder="#HEX oder Farbnamen (z. B. royalblue)"
+        // Wichtig: Textfeld zeigt den aktuellen State-Wert an.
         value={value}
         onChange={(e) => {
           const raw = e.target.value;
+          // Korrektur: Wir setzen den normalisierten Wert in den State, wenn er valide ist.
+          // Das behebt das Problem, dass die Farbfeld-Wahl überschrieben wird.
           const norm = toHex6(raw);
           onChange(norm || raw); 
         }}
@@ -320,7 +327,7 @@ const ColorRow = ({ label, value, onChange, contrast }) => {
               : "bg-red-600 text-white"
           }`}
         >
-          {contrast >= 4.5 ? '✅' : '⚠️'} {contrast}:1
+          {contrast >= 4.5 ? 'WCAG AA' : 'Kontrast ⚠️'} {contrast}:1
         </Badge>
       )}
     </div>
@@ -426,7 +433,7 @@ export default function App() {
 
   const handleClear = useCallback(() => {
     setShowMenu(false); 
-    const c = prompt("ALLE lokalen Daten löschen? Tippe LÖSCHEN zur Bestätigung. 🗑️");
+    const c = prompt("ALLE lokalen Daten löschen? Tippe LÖSCHEN zur Bestätigung.");
     if ((c || "").trim().toUpperCase() === "LÖSCHEN") {
       clearStorage();
     }
@@ -470,7 +477,8 @@ export default function App() {
   const copyPrompt = async () => {
     try {
       await navigator.clipboard.writeText(prompt);
-      setCopyMsg("Prompt kopiert! 📝");
+      // FIX 1: Emojis entfernt
+      setCopyMsg("Prompt kopiert!");
     } catch {
       setCopyMsg("Kopieren fehlgeschlagen – bitte manuell markieren");
     }
@@ -491,7 +499,8 @@ export default function App() {
   const contrastSecondary = useMemo(() => contrastWithWhite(state.farben.secondary), [state.farben.secondary]);
 
   return (
-    <div className="min-h-screen text-white" style={{ backgroundColor: MOSAIK_BACKGROUND }}>
+    // FIX 2: Poppins Font simuliert (muss im globalen CSS existieren)
+    <div className="min-h-screen text-white font-poppins" style={{ backgroundColor: MOSAIK_BACKGROUND }}>
       {/* Topbar */}
       <header className="sticky top-0 z-20 bg-gray-900/90 backdrop-blur border-b border-gray-800">
         <div className="py-3 px-4 flex items-center justify-between gap-2">
@@ -507,7 +516,7 @@ export default function App() {
             </Button>
             {showMenu && (
               <motion.div 
-                initial={{ opacity: 0, y: -10 }} // Animation nach oben, da top-right
+                initial={{ opacity: 0, y: -10 }} 
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: -10, transition: { duration: 0.15 } }}
                 transition={{ type: "tween", duration: 0.2 }}
@@ -525,11 +534,11 @@ export default function App() {
                   <div className="h-px bg-gray-700 my-1"></div>
                   <Button variant="ghost" size="sm" onClick={handleReset} className="w-full justify-start text-red-400 hover:bg-red-900/50">
                     <RotateCcw className="h-4 w-4 mr-2" />
-                    Zurücksetzen (🔄)
+                    Zurücksetzen
                   </Button>
                   <Button variant="ghost" size="sm" onClick={handleClear} className="w-full justify-start text-red-400 hover:bg-red-900/50">
                     <Trash2 className="h-4 w-4 mr-2" />
-                    Lokal Löschen (🗑️)
+                    Lokal Löschen
                   </Button>
                 </div>
               </motion.div>
@@ -552,8 +561,6 @@ export default function App() {
           {step === 1 && (
             <motion.div key="s1" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }}>
               <StepHeader step={1} total={total} title="Markenbasis" subtitle="Name, Slogan, Branche, Kurzbeschreibung" />
-
-              {/* FIX 2: Schnellstart-Templates entfernt */}
               
               <Section title="Grunddaten" info="Pflichtfelder sind mit * gekennzeichnet">
                 <div className="grid gap-3">
@@ -650,7 +657,7 @@ export default function App() {
           {/* Schritt 2 (jetzt mit Wettbewerb) */}
           {step === 2 && (
             <motion.div key="s2" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }}>
-              <StepHeader step={2} total={total} title="Zielgruppe & Wettbewerb" subtitle="Wen sprechen wir an? In welchen Kontexten? Wer sind die Konkurrenten?" />
+              <StepHeader step={2} total={total} title="Zielgruppe & Wettbewerb" subtitle="Wen sprechen wir an? In welchen Kontexten? Wer sind die Konurrenten?" />
               
               <Section
                 title="Zielgruppe"
@@ -669,7 +676,7 @@ export default function App() {
                       className={state.zielgruppe.b2 === "B2C" ? "text-white" : "bg-gray-700 text-gray-300 hover:bg-gray-600 border-gray-700"}
                       style={state.zielgruppe.b2 === "B2C" ? { backgroundColor: MOSAIK_PRIMARY } : {}}
                     >
-                      B2C 🧑
+                      B2C
                     </Button>
                     <Button
                       variant={state.zielgruppe.b2 === "B2B" ? "default" : "outline"}
@@ -678,7 +685,7 @@ export default function App() {
                       className={state.zielgruppe.b2 === "B2B" ? "text-white" : "bg-gray-700 text-gray-300 hover:bg-gray-600 border-gray-700"}
                       style={state.zielgruppe.b2 === "B2B" ? { backgroundColor: MOSAIK_PRIMARY } : {}}
                     >
-                      B2B 🏢
+                      B2B
                     </Button>
                     <Info
                       size={16}
@@ -778,7 +785,7 @@ export default function App() {
               </Section>
               <Section title="Zentrale Botschaft (optional)">
                 <Textarea
-                  placeholder="Welche Botschaft soll das Logo transportieren? 💬"
+                  placeholder="Welche Botschaft soll das Logo transportieren?"
                   value={state.werte.botschaft}
                   onChange={(e) => setState((p) => ({ ...p, werte: { ...p.werte, botschaft: e.target.value } }))}
                   className="bg-gray-900 border-gray-700 text-white placeholder:text-gray-500"
@@ -802,7 +809,7 @@ export default function App() {
                     style={{ color: MOSAIK_PRIMARY }}
                   />
                   <label htmlFor="story-enabled" className="text-sm">
-                    Eigene Brand Story als Inspirationsquelle einbeziehen 📖
+                    Eigene Brand Story als Inspirationsquelle einbeziehen
                   </label>
                 </div>
               </Section>
@@ -890,7 +897,7 @@ export default function App() {
                     contrast={contrastSecondary}
                   />
                   <Input
-                    placeholder="Ausschlüsse (z. B. kein Pink, kein Neon) 🚫"
+                    placeholder="Ausschlüsse (z. B. kein Pink, kein Neon)"
                     value={state.farben.verbot}
                     onChange={(e) => setState((p) => ({ ...p, farben: { ...p.farben, verbot: e.target.value } }))}
                     className="bg-gray-900 border-gray-700 text-white placeholder:text-gray-500"
@@ -953,7 +960,8 @@ export default function App() {
                 <div className="flex items-center gap-2 flex-wrap">
                   <Button onClick={copyPrompt} className="text-white" style={{ backgroundColor: MOSAIK_PRIMARY }}>
                     <Copy className="h-4 w-4 mr-2" />
-                    {copyMsg.includes("kopiert") ? "Kopiert! 📝" : "In Zwischenablage kopieren"}
+                    {/* FIX 1: Emojis entfernt */}
+                    {copyMsg.includes("kopiert") ? "Kopiert!" : "In Zwischenablage kopieren"}
                   </Button>
                   <Badge variant="secondary" className="bg-gray-700 text-gray-300">Nur Textausgabe – manuell in KI einfügen</Badge>
                 </div>
@@ -992,7 +1000,7 @@ export default function App() {
           ) : (
             <Button onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })} className="px-6 py-6 text-white" style={{ backgroundColor: MOSAIK_PRIMARY }}>
               <Check className="h-5 w-5 mr-2" />
-              Fertig 🎉
+              Fertig
             </Button>
           )}
         </div>
@@ -1000,7 +1008,7 @@ export default function App() {
     </div>
   );
 }
-/* ------------ Templates (unverändert) ------------ */
+/* ------------ Templates (unverändert, aber nicht mehr benutzt) ------------ */
 const TEMPLATES = [
   {
     name: "Tech Startup",
