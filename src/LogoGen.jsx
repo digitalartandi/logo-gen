@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState, useRef, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Check, ChevronLeft, ChevronRight, Copy, Trash2, RotateCcw, Info, Download, Upload, AlertTriangle, Sparkles, MoreVertical, X } from "lucide-react";
+import { Check, ChevronLeft, ChevronRight, Copy, Trash2, RotateCcw, Info, Download, Upload, AlertTriangle, MoreVertical } from "lucide-react";
 import { Button, Card, CardContent, CardHeader, CardTitle, Input, Textarea, Badge } from "./ui";
 
 /* ------------ kleine Helfer ------------ */
@@ -144,7 +144,31 @@ const MOSAIK_PRIMARY = "#6F00FF";
 const MOSAIK_BACKGROUND = "#141414"; 
 // Neu: Leicht dunklerer Card-Hintergrund für mehr Tiefe
 const MOSAIK_CARD_BG_DARKER = "#1C1C1C"; 
-const MOSAIK_BORDER_COLOR = "rgba(111, 0, 255, 0.3)"; // Subtiler lila-Rand
+// FIX 1: Subtiler lila-Rand für den Premium-Look
+const MOSAIK_BORDER_COLOR = "rgba(111, 0, 255, 0.3)"; 
+
+// FIX 5: SVG Logo
+const MosaikLogo = () => (
+    <svg 
+        xmlns="http://www.w3.org/2000/svg" 
+        xmlSpace="preserve" 
+        viewBox="0 0 372.017 78.581" 
+        style={{ width: '100px', height: '21px', verticalAlign: 'middle' }}
+        role="img"
+        aria-label="Mosaik Logo"
+    >
+        <defs>
+            <linearGradient id="a" x1="0" x2="230" y1="180" y2="180" gradientTransform="matrix(.26458 0 0 .26458 -111.359 97.351)" gradientUnits="userSpaceOnUse">
+                <stop stopColor="#6F00FF"/>
+                <stop offset=".5" stopColor="#6F00FF"/>
+                <stop offset="1" stopColor="#FF1EFF"/>
+            </linearGradient>
+        </defs>
+        <path fill="url(#a)" d="M-81.08 114.55h.292c.298 3.503 1.103 6.855 2.441 10.011l.007.017.008.017c1.778 4.052 4.183 7.602 7.18 10.6 3 2.997 6.548 5.403 10.6 7.181l.017.007.017.007c3.157 1.339 6.51 2.144 10.013 2.442v.292c-3.509.308-6.868 1.141-10.028 2.526-4.06 1.724-7.616 4.105-10.618 7.107-2.997 2.997-5.403 6.547-7.181 10.6l-.008.016-.007.017c-1.338 3.157-2.143 6.509-2.44 10.012h-.293c-.308-3.51-1.141-6.868-2.527-10.029l-.003-.006c-1.668-3.93-3.955-7.389-6.823-10.328l-.007-.007-.266-.27-.006-.006c-3.001-3-6.558-5.382-10.617-7.105l-.002-.001c-3.16-1.386-6.518-2.219-10.028-2.527v-.292c3.505-.297 6.856-1.103 10.013-2.441l.017-.007.018-.007c4.052-1.779 7.602-4.184 10.599-7.181 3-3.002 5.382-6.558 7.105-10.617 1.386-3.16 2.22-6.52 2.527-10.03z" style={{ fill: 'url(#a)', strokeWidth: '.264583' }} transform="translate(111.359 -114.02)"/>
+        <path fill="#fff" d="M-6.769 114.02v23.733c1.905-2.222 5.398-4.445 11.113-4.445 10.636 0 17.938 8.89 17.938 20.955 0 12.065-7.302 20.876-17.938 20.876-5.795 0-9.684-2.382-11.827-5.239l-.556 4.445h-10.477V114.02zm8.255 29.527c-4.048 0-6.588 2.144-8.255 5.08V159.9c1.667 2.857 4.207 5 8.255 5 5.318 0 8.97-4.048 8.97-10.636 0-6.588-3.652-10.716-8.97-10.716zm50.834-10.239v11.668h-1.032c-4.683 0-7.7 2.302-10.001 5.318v24.051H29.539v-40.243h10.478l.714 5.318c1.984-3.334 5.953-6.112 11.589-6.112zm21.217 0c5.715 0 9.445 2.381 11.51 5.318l.555-4.524h10.557v40.243H85.602l-.556-4.445c-2.064 2.857-5.794 5.239-11.51 5.239-10.556 0-17.7-8.81-17.7-20.876 0-12.065 7.144-20.955 17.7-20.955zm2.857 10.24c-5.159 0-8.652 4.127-8.652 10.715 0 6.588 3.493 10.636 8.652 10.636 3.97 0 6.271-2.143 8.017-5v-11.35c-1.746-2.858-4.048-5.002-8.017-5.002zm51.883-10.24c9.842 0 15.16 6.985 15.16 17.86v23.177H131.69v-22.543c0-4.445-2.461-7.46-6.588-7.46-3.572 0-6.033 2.301-7.541 4.682v25.321h-11.748v-40.243h10.557l.556 4.445c1.984-2.937 5.874-5.239 11.35-5.239zm62.772-19.288v60.325h-10.556l-.556-4.445c-2.064 2.857-6.033 5.239-11.748 5.239-10.715 0-18.017-8.81-18.017-20.876 0-12.065 7.302-20.955 18.017-20.955 5.715 0 9.208 2.223 11.113 4.445V114.02zm-20.002 29.527c-5.318 0-8.97 4.128-8.97 10.716 0 6.588 3.652 10.636 8.97 10.636 3.969 0 6.509-2.143 8.255-5v-11.272c-1.746-2.936-4.286-5.08-8.255-5.08zm35.674-29.05c3.968 0 6.905 2.936 6.905 6.905 0 3.969-2.937 6.905-6.905 6.905-3.97 0-6.827-2.936-6.827-6.905 0-3.969 2.858-6.906 6.827-6.906zm5.873 19.605v40.243h-11.747v-40.243zm25.205-.794c5.715 0 9.683 2.381 11.747 5.318l.556-4.524h10.557v58.5H248.91v-21.908c-1.905 2.222-5.397 4.445-11.112 4.445-10.716 0-18.018-8.81-18.018-20.876 0-12.065 7.302-20.955 18.018-20.955zm2.857 10.24c-5.318 0-8.97 4.127-8.97 10.715s3.652 10.636 8.97 10.636c3.969 0 6.509-2.143 8.255-5v-11.35c-1.746-2.858-4.286-5.002-8.255-5.002z" style={{ strokeWidth: '.264583' }} transform="translate(111.359 -114.02)"/>
+    </svg>
+);
+
 
 const StepHeader = ({ step, total, title, subtitle }) => (
   <div className="mb-5">
@@ -258,25 +282,23 @@ const ColorRow = ({ label, value, onChange, contrast }) => {
 
   return (
     <div className="flex items-center gap-3 flex-wrap">
-      <label className="text-sm w-36 text-gray-300">{label}</label>
-      {/* FIX 4: Farbwähler-Logik korrigiert, um den Wert des Farbfelds zu übernehmen */}
+      <label className="text-sm w-36 text-gray-300">{label} <span aria-hidden="true">🎨</span></label>
       <Input
         type="color"
         value={normalized || "#FFFFFF"}
-        // WICHTIGER FIX: Bei Änderung im Farbfeld direkt den neuen Wert an den State übergeben.
+        // FIX 4: Korrigiert, um den Wert des Farbfelds zu übernehmen
         onChange={(e) => onChange(e.target.value)}
         className="h-10 w-16 touch-manipulation" 
         aria-label={`${label} (Farbfeld)`}
         title="Farbfeld – klick zum Wählen"
       />
-      {/* FIX 1: Dunkle Eingabefelder */}
       <Input
         placeholder="#HEX oder Farbnamen (z. B. royalblue)"
         value={value}
         onChange={(e) => {
           const raw = e.target.value;
           const norm = toHex6(raw);
-          onChange(norm || raw); // rohen Wert erlauben; norm greift, sobald valide
+          onChange(norm || raw); 
         }}
         aria-label={`${label} (Textfeld)`}
         className="bg-gray-900 border-gray-700 text-white placeholder:text-gray-500"
@@ -298,13 +320,7 @@ const ColorRow = ({ label, value, onChange, contrast }) => {
               : "bg-red-600 text-white"
           }`}
         >
-          Kontrast zu Weiß: {contrast}:1{" "}
-          {contrast < 4.5 && (
-            <span className="flex items-center gap-1 ml-1">
-              <AlertTriangle size={14} aria-hidden />
-              niedrig
-            </span>
-          )}
+          {contrast >= 4.5 ? '✅' : '⚠️'} {contrast}:1
         </Badge>
       )}
     </div>
@@ -380,7 +396,7 @@ export default function App() {
   const { state, setState, reset, clearStorage } = usePersistentState();
   const [step, setStep] = useState(1);
   const [copyMsg, setCopyMsg] = useState("");
-  const [showMenu, setShowMenu] = useState(false); // FIX 3
+  const [showMenu, setShowMenu] = useState(false); 
   const fileInputRef = useRef(null);
 
   const labels = ["Basis", "Zielgruppe & Wettbewerb", "Werte", "Story", "Stil", "Farben", "Typo/Prompt"];
@@ -404,25 +420,25 @@ export default function App() {
   const prev = () => setStep((s) => Math.max(1, s - 1));
 
   const handleReset = useCallback(() => {
-    setShowMenu(false); // Menü schließen
+    setShowMenu(false); 
     if (confirm("Entwurf wirklich auf Standard zurücksetzen?")) reset();
   }, [reset]);
 
   const handleClear = useCallback(() => {
-    setShowMenu(false); // Menü schließen
-    const c = prompt("ALLE lokalen Daten löschen? Tippe LÖSCHEN zur Bestätigung.");
+    setShowMenu(false); 
+    const c = prompt("ALLE lokalen Daten löschen? Tippe LÖSCHEN zur Bestätigung. 🗑️");
     if ((c || "").trim().toUpperCase() === "LÖSCHEN") {
       clearStorage();
     }
   }, [clearStorage]);
 
   const handleImportClick = () => {
-    setShowMenu(false); // Menü schließen
+    setShowMenu(false); 
     fileInputRef.current?.click();
   };
 
   const handleExport = () => {
-    setShowMenu(false); // Menü schließen
+    setShowMenu(false); 
     const blob = new Blob([JSON.stringify(state, null, 2)], { type: "application/json" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
@@ -454,7 +470,7 @@ export default function App() {
   const copyPrompt = async () => {
     try {
       await navigator.clipboard.writeText(prompt);
-      setCopyMsg("Prompt kopiert");
+      setCopyMsg("Prompt kopiert! 📝");
     } catch {
       setCopyMsg("Kopieren fehlgeschlagen – bitte manuell markieren");
     }
@@ -479,22 +495,23 @@ export default function App() {
       {/* Topbar */}
       <header className="sticky top-0 z-20 bg-gray-900/90 backdrop-blur border-b border-gray-800">
         <div className="py-3 px-4 flex items-center justify-between gap-2">
-          {/* Nur Icon */}
+          {/* FIX 5: Mosaik Logo SVG */}
           <div className="flex items-center gap-2">
-            <Sparkles className="h-5 w-5" aria-hidden="true" style={{ color: MOSAIK_PRIMARY }} />
+            <MosaikLogo />
+            <span className="sr-only">Logo Prompt Builder</span>
           </div>
           {/* FIX 3: Menü-Button und Dropdown */}
           <div className="relative">
-            <Button variant="outline" size="icon" onClick={() => setShowMenu(p => !p)} className="bg-gray-800 hover:bg-gray-700 border-gray-700">
-              <MoreVertical className="h-5 w-5" />
+            <Button variant="outline" size="icon" onClick={() => setShowMenu(p => !p)} className="bg-gray-800 hover:bg-gray-700 border-gray-700" aria-label="Weitere Optionen">
+              <MoreVertical className="h-5 w-5 text-white" />
             </Button>
             {showMenu && (
               <motion.div 
-                initial={{ opacity: 0, y: 10 }}
+                initial={{ opacity: 0, y: -10 }} // Animation nach oben, da top-right
                 animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: 10, transition: { duration: 0.15 } }}
+                exit={{ opacity: 0, y: -10, transition: { duration: 0.15 } }}
                 transition={{ type: "tween", duration: 0.2 }}
-                className="absolute right-0 mt-2 w-48 rounded-lg shadow-xl bg-gray-800 border border-gray-700 z-30 overflow-hidden"
+                className="absolute right-0 mt-2 w-48 rounded-lg shadow-xl bg-gray-800 border border-gray-700 z-30 overflow-hidden origin-top-right"
               >
                 <div className="p-2 space-y-1">
                   <Button variant="ghost" size="sm" onClick={handleExport} className="w-full justify-start text-gray-300 hover:bg-gray-700">
@@ -508,11 +525,11 @@ export default function App() {
                   <div className="h-px bg-gray-700 my-1"></div>
                   <Button variant="ghost" size="sm" onClick={handleReset} className="w-full justify-start text-red-400 hover:bg-red-900/50">
                     <RotateCcw className="h-4 w-4 mr-2" />
-                    Zurücksetzen
+                    Zurücksetzen (🔄)
                   </Button>
                   <Button variant="ghost" size="sm" onClick={handleClear} className="w-full justify-start text-red-400 hover:bg-red-900/50">
                     <Trash2 className="h-4 w-4 mr-2" />
-                    Lokal Löschen
+                    Lokal Löschen (🗑️)
                   </Button>
                 </div>
               </motion.div>
@@ -652,7 +669,7 @@ export default function App() {
                       className={state.zielgruppe.b2 === "B2C" ? "text-white" : "bg-gray-700 text-gray-300 hover:bg-gray-600 border-gray-700"}
                       style={state.zielgruppe.b2 === "B2C" ? { backgroundColor: MOSAIK_PRIMARY } : {}}
                     >
-                      B2C
+                      B2C 🧑
                     </Button>
                     <Button
                       variant={state.zielgruppe.b2 === "B2B" ? "default" : "outline"}
@@ -661,7 +678,7 @@ export default function App() {
                       className={state.zielgruppe.b2 === "B2B" ? "text-white" : "bg-gray-700 text-gray-300 hover:bg-gray-600 border-gray-700"}
                       style={state.zielgruppe.b2 === "B2B" ? { backgroundColor: MOSAIK_PRIMARY } : {}}
                     >
-                      B2B
+                      B2B 🏢
                     </Button>
                     <Info
                       size={16}
@@ -761,7 +778,7 @@ export default function App() {
               </Section>
               <Section title="Zentrale Botschaft (optional)">
                 <Textarea
-                  placeholder="Welche Botschaft soll das Logo transportieren?"
+                  placeholder="Welche Botschaft soll das Logo transportieren? 💬"
                   value={state.werte.botschaft}
                   onChange={(e) => setState((p) => ({ ...p, werte: { ...p.werte, botschaft: e.target.value } }))}
                   className="bg-gray-900 border-gray-700 text-white placeholder:text-gray-500"
@@ -785,7 +802,7 @@ export default function App() {
                     style={{ color: MOSAIK_PRIMARY }}
                   />
                   <label htmlFor="story-enabled" className="text-sm">
-                    Eigene Brand Story als Inspirationsquelle einbeziehen
+                    Eigene Brand Story als Inspirationsquelle einbeziehen 📖
                   </label>
                 </div>
               </Section>
@@ -873,7 +890,7 @@ export default function App() {
                     contrast={contrastSecondary}
                   />
                   <Input
-                    placeholder="Ausschlüsse (z. B. kein Pink, kein Neon)"
+                    placeholder="Ausschlüsse (z. B. kein Pink, kein Neon) 🚫"
                     value={state.farben.verbot}
                     onChange={(e) => setState((p) => ({ ...p, farben: { ...p.farben, verbot: e.target.value } }))}
                     className="bg-gray-900 border-gray-700 text-white placeholder:text-gray-500"
@@ -936,7 +953,7 @@ export default function App() {
                 <div className="flex items-center gap-2 flex-wrap">
                   <Button onClick={copyPrompt} className="text-white" style={{ backgroundColor: MOSAIK_PRIMARY }}>
                     <Copy className="h-4 w-4 mr-2" />
-                    {copyMsg.includes("kopiert") ? "Kopiert!" : "In Zwischenablage kopieren"}
+                    {copyMsg.includes("kopiert") ? "Kopiert! 📝" : "In Zwischenablage kopieren"}
                   </Button>
                   <Badge variant="secondary" className="bg-gray-700 text-gray-300">Nur Textausgabe – manuell in KI einfügen</Badge>
                 </div>
@@ -975,7 +992,7 @@ export default function App() {
           ) : (
             <Button onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })} className="px-6 py-6 text-white" style={{ backgroundColor: MOSAIK_PRIMARY }}>
               <Check className="h-5 w-5 mr-2" />
-              Fertig
+              Fertig 🎉
             </Button>
           )}
         </div>
