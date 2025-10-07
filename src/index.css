@@ -1,0 +1,7 @@
+@import "tailwindcss";
+
+/* optional: normales CSS statt @apply */
+body {
+  background: #ffffff;
+  color: #0f172a;
+}
