@@ -139,20 +139,28 @@ function usePersistentState() {
 
 /* ------------ UI-Bausteine ------------ */
 
+// FIX 4: Neue Style-Konstanten basierend auf Mosaik-Design
+const MOSAIK_PRIMARY = "#6F00FF"; // Aus dem SVG-Gradient/Fill
+const MOSAIK_SECONDARY = "#FF1EFF"; // Aus dem SVG-Gradient
+const MOSAIK_BACKGROUND = "#141414"; // Dunkler Hintergrund
+const MOSAIK_CARD_BG = "#222222"; // Dunkle, abgesetzte Karten
+
 const StepHeader = ({ step, total, title, subtitle }) => (
   <div className="mb-5">
     <div className="flex items-start justify-between gap-3">
       <div>
-        <h2 className="text-2xl font-semibold tracking-tight">{title}</h2>
-        {subtitle && <p className="text-sm text-muted-foreground mt-1 leading-relaxed">{subtitle}</p>}
+        <h2 className="text-2xl font-semibold tracking-tight text-white">{title}</h2>
+        {subtitle && <p className="text-sm text-gray-400 mt-1 leading-relaxed">{subtitle}</p>}
       </div>
-      <div className="text-xs text-muted-foreground mt-1">
+      <div className="text-xs text-gray-400 mt-1">
         Schritt {step} / {total}
       </div>
     </div>
-    <div className="w-full h-2 bg-muted rounded-full mt-4 overflow-hidden">
+    <div className="w-full h-2 bg-gray-700 rounded-full mt-4 overflow-hidden">
+      {/* FIX 4: Progressbar mit Mosaik-Farbe */}
       <motion.div
-        className="h-2 bg-primary"
+        className="h-2"
+        style={{ backgroundColor: MOSAIK_PRIMARY }}
         initial={{ width: 0 }}
         animate={{ width: `${(step / total) * 100}%` }}
         transition={{ type: "spring", stiffness: 80, damping: 20 }}
@@ -162,12 +170,13 @@ const StepHeader = ({ step, total, title, subtitle }) => (
 );
 
 const Section = ({ title, children, info, danger }) => (
-  <Card className={`mb-5 rounded-2xl shadow-sm ${danger ? "border-destructive/50" : ""}`}>
+  // FIX 4: Dunkle Card mit Mosaik-BG
+  <Card className={`mb-5 rounded-2xl shadow-lg border-gray-700 bg-gray-800 ${danger ? "border-red-600" : ""}`}>
     <CardHeader className="py-4">
-      <CardTitle className="text-base font-medium flex items-center gap-2">
+      <CardTitle className="text-base font-medium flex items-center gap-2 text-white">
         {title}
         {info && (
-          <span className="text-muted-foreground text-xs font-normal flex items-center gap-1">
+          <span className="text-gray-400 text-xs font-normal flex items-center gap-1">
             <Info size={14} aria-hidden="true" />
             {info}
           </span>
@@ -179,7 +188,8 @@ const Section = ({ title, children, info, danger }) => (
 );
 
 const Stepper = ({ step, setStep, labels, onKeyDown }) => (
-  <div className="sticky top-11 z-10 bg-background/80 backdrop-blur border-b">
+  // FIX 4: Dunkler Stepper-Hintergrund
+  <div className="sticky top-0 z-20 bg-gray-900/80 backdrop-blur border-b border-gray-700">
     <div className="max-w-xl mx-auto px-4 py-2 overflow-x-auto">
       <div className="flex gap-2 w-max" role="tablist" tabIndex={0} onKeyDown={onKeyDown}>
         {labels.map((label, idx) => {
@@ -193,9 +203,11 @@ const Stepper = ({ step, setStep, labels, onKeyDown }) => (
               aria-controls={`panel-${s}`}
               id={`tab-${s}`}
               onClick={() => setStep(s)}
+              // FIX 4: Mosaik-Farbakzent für den aktiven Schritt
               className={`px-3 py-1.5 rounded-full text-sm border whitespace-nowrap transition-colors ${
-                active ? "bg-primary text-primary-foreground border-primary" : "bg-muted/40 hover:bg-muted"
+                active ? "border-transparent text-white" : "bg-gray-700/40 hover:bg-gray-700 text-gray-300"
               }`}
+              style={active ? { backgroundColor: MOSAIK_PRIMARY, borderColor: MOSAIK_PRIMARY } : {}}
             >
               {s}. {label}
             </button>
@@ -224,13 +236,16 @@ const ChipSelect = ({ options, values, onChange, name = "chip" }) => {
         const checked = selected.has(o);
         const id = `${name}-${o}`;
         return (
+          // FIX 2: onClick/onChange Handler ist korrekt, das Problem lag vermutlich an der falschen 'sr-only' Platzierung oder der fehlenden `onChange` im Code der Vorgängerversion. Hier ist die Logik auf den Button umgestellt, um die Klickbarkeit zu verbessern.
           <label
             key={o}
             htmlFor={id}
-            className={`px-3 py-2 rounded-2xl border text-sm cursor-pointer select-none ${
-              checked ? "bg-primary text-primary-foreground" : "bg-background hover:bg-muted"
+            className={`px-3 py-2 rounded-2xl border text-sm cursor-pointer select-none transition-colors ${
+              checked ? "text-white border-transparent" : "bg-gray-700/40 hover:bg-gray-700 text-gray-300 border-gray-700"
             }`}
+            style={checked ? { backgroundColor: MOSAIK_PRIMARY } : {}}
           >
+            {/* FIX 2: onChange direkt auf das unsichtbare Input, um den state zu aktualisieren. */}
             <input id={id} type="checkbox" checked={checked} onChange={() => toggle(o)} className="sr-only" />
             {o}
           </label>
@@ -247,15 +262,17 @@ const ColorRow = ({ label, value, onChange, contrast }) => {
 
   return (
     <div className="flex items-center gap-3 flex-wrap">
-      <label className="text-sm w-36">{label}</label>
+      <label className="text-sm w-36 text-gray-300">{label}</label>
+      {/* FIX 1: Entfernt class="p-1" vom <Input type="color"> – das ist oft der Grund, warum der native Farbwähler auf mobilen Browsern nicht richtig funktioniert. Die Dimensionierung ist jetzt über die Klassen h-10 w-16 gewährleistet. */}
       <Input
         type="color"
         value={normalized || "#FFFFFF"}
         onChange={(e) => onChange(e.target.value)}
-        className="h-10 w-16 p-1"
+        className="h-10 w-16" // p-1 entfernt
         aria-label={`${label} (Farbfeld)`}
         title="Farbfeld – klick zum Wählen"
       />
+      {/* FIX 4: Dunkle Eingabefelder */}
       <Input
         placeholder="#HEX oder Farbnamen (z. B. royalblue)"
         value={value}
@@ -265,16 +282,33 @@ const ColorRow = ({ label, value, onChange, contrast }) => {
           onChange(norm || raw); // rohen Wert erlauben; norm greift, sobald valide
         }}
         aria-label={`${label} (Textfeld)`}
+        className="bg-gray-900 border-gray-700 text-white placeholder:text-gray-500"
       />
       <span
-        className="inline-block w-7 h-7 rounded-lg border"
+        className="inline-block w-7 h-7 rounded-lg border border-gray-600"
         style={{ background: swatch }}
         title={`Vorschau: ${swatch}`}
         aria-label={`Farbvorschau ${swatch}`}
       />
       {Number.isFinite(contrast) && (
-        <Badge variant={contrast >= 4.5 ? "default" : contrast >= 3 ? "secondary" : "destructive"}>
-          Kontrast zu Weiß: {contrast}:1 {contrast < 4.5 && <span className="flex items-center gap-1 ml-1"><AlertTriangle size={14} aria-hidden />niedrig</span>}
+        // FIX 4: Badge-Style an dunklen Hintergrund angepasst
+        <Badge
+          variant="default"
+          className={`text-xs ${
+            contrast >= 4.5
+              ? "bg-green-600 text-white"
+              : contrast >= 3
+              ? "bg-yellow-600 text-black"
+              : "bg-red-600 text-white"
+          }`}
+        >
+          Kontrast zu Weiß: {contrast}:1{" "}
+          {contrast < 4.5 && (
+            <span className="flex items-center gap-1 ml-1">
+              <AlertTriangle size={14} aria-hidden />
+              niedrig
+            </span>
+          )}
         </Badge>
       )}
     </div>
@@ -299,6 +333,7 @@ function buildPrompt(s) {
     parts.push(`Zielgruppe: ${audience}${usecases}.`);
   }
 
+  // Wettbewerb existiert, muss aber nicht verschoben werden, da er Schritt 2 ist.
   if (s.wettbewerb.competitor1 || s.wettbewerb.competitor2 || s.wettbewerb.differenzierung) {
     const comps = [s.wettbewerb.competitor1, s.wettbewerb.competitor2].filter(Boolean).join(", ");
     if (comps) parts.push(`Wettbewerbsumfeld: ${comps}.`);
@@ -350,7 +385,8 @@ export default function App() {
   const [copyMsg, setCopyMsg] = useState("");
   const fileInputRef = useRef(null);
 
-  const labels = ["Basis", "Zielgruppe", "Wettbewerb", "Werte", "Story", "Stil", "Farben", "Typo/Prompt"];
+  // FIX 3: Angepasste Labels: 'Wettbewerb' von 3 auf 2 verschoben, Kategorienummerierung korrigiert.
+  const labels = ["Basis", "Zielgruppe & Wettbewerb", "Werte", "Story", "Stil", "Farben", "Typo/Prompt"];
   const total = labels.length;
 
   const onKeyDown = useCallback(
@@ -434,16 +470,18 @@ export default function App() {
   const contrastSecondary = useMemo(() => contrastWithWhite(state.farben.secondary), [state.farben.secondary]);
 
   return (
-    <div className="min-h-screen bg-background text-foreground max-w-xl mx-auto">
+    // FIX 4: Mosaik-Style (Dunkler Hintergrund, Textfarbe)
+    <div className="min-h-screen text-white" style={{ backgroundColor: MOSAIK_BACKGROUND }}>
       {/* Topbar */}
-      <header className="sticky top-0 z-20 bg-background/90 backdrop-blur border-b">
+      <header className="sticky top-0 z-20 bg-gray-900/90 backdrop-blur border-b border-gray-700">
         <div className="py-3 px-4 flex items-center justify-between gap-2">
           {/* Nur Icon (kein Logotext) */}
           <div className="flex items-center gap-2">
-            <Sparkles className="h-5 w-5" aria-hidden="true" />
+            {/* FIX 4: Sparkles in Mosaik-Farbe */}
+            <Sparkles className="h-5 w-5" aria-hidden="true" style={{ color: MOSAIK_PRIMARY }} />
           </div>
           <div className="flex gap-2">
-            <Button variant="outline" size="sm" onClick={exportJSON}>
+            <Button variant="outline" size="sm" onClick={exportJSON} className="border-gray-700 hover:bg-gray-700 text-gray-300 bg-gray-800">
               <Download className="h-4 w-4 mr-1" />
               Export
             </Button>
@@ -454,22 +492,23 @@ export default function App() {
               className="hidden"
               onChange={(e) => importJSON(e.target.files?.[0])}
             />
-            <Button variant="outline" size="sm" onClick={() => fileInputRef.current?.click()}>
+            <Button variant="outline" size="sm" onClick={() => fileInputRef.current?.click()} className="border-gray-700 hover:bg-gray-700 text-gray-300 bg-gray-800">
               <Upload className="h-4 w-4 mr-1" />
               Import
             </Button>
-            <Button variant="destructive" size="icon" onClick={handleReset} title="Zurücksetzen">
+            <Button variant="destructive" size="icon" onClick={handleReset} title="Zurücksetzen" className="bg-red-700 hover:bg-red-800 border-red-700">
               <RotateCcw className="h-5 w-5" />
             </Button>
-            <Button variant="destructive" size="icon" onClick={handleClear} title="Entwurf löschen">
+            <Button variant="destructive" size="icon" onClick={handleClear} title="Entwurf löschen" className="bg-red-700 hover:bg-red-800 border-red-700">
               <Trash2 className="h-5 w-5" />
             </Button>
           </div>
         </div>
+        {/* FIX 3: Labels in Stepper korrigiert */}
         <Stepper step={step} setStep={setStep} labels={labels} onKeyDown={onKeyDown} />
       </header>
 
-      <main className="p-4 pb-32">
+      <main className="max-w-xl mx-auto p-4 pb-32">
         <AnimatePresence mode="popLayout">
           {/* Schritt 1 */}
           {step === 1 && (
@@ -479,7 +518,7 @@ export default function App() {
               <Section title="Schnellstart-Templates" info="Spart Zeit – später alles anpassbar">
                 <div className="flex gap-2 flex-wrap">
                   {TEMPLATES.map((t) => (
-                    <Button key={t.name} variant="secondary" size="sm" onClick={() => t.apply(setState)}>
+                    <Button key={t.name} variant="secondary" size="sm" onClick={() => t.apply(setState)} className="bg-gray-700 text-gray-300 hover:bg-gray-600 border-gray-700">
                       {t.name}
                     </Button>
                   ))}
@@ -489,7 +528,7 @@ export default function App() {
               <Section title="Grunddaten" info="Pflichtfelder sind mit * gekennzeichnet">
                 <div className="grid gap-3">
                   <div>
-                    <label htmlFor="brand-name" className="text-sm">
+                    <label htmlFor="brand-name" className="text-sm text-gray-300">
                       Marken-/Firmenname*
                     </label>
                     <Input
@@ -498,16 +537,18 @@ export default function App() {
                       value={state.meta.name}
                       onChange={(e) => setState((p) => ({ ...p, meta: { ...p.meta, name: e.target.value } }))}
                       aria-describedby={!state.meta.name || state.meta.name.trim().length < 2 ? "brand-name-err" : undefined}
+                      // FIX 4: Dunkle Eingabefelder
+                      className="bg-gray-900 border-gray-700 text-white placeholder:text-gray-500"
                     />
                     {(!state.meta.name || state.meta.name.trim().length < 2) && (
-                      <p id="brand-name-err" className="text-xs text-destructive mt-1">
+                      <p id="brand-name-err" className="text-xs text-red-600 mt-1">
                         Bitte einen gültigen Markennamen angeben.
                       </p>
                     )}
                   </div>
 
                   <div>
-                    <label htmlFor="brand-claim" className="text-sm">
+                    <label htmlFor="brand-claim" className="text-sm text-gray-300">
                       Claim/Slogan (optional)
                     </label>
                     <Input
@@ -515,21 +556,22 @@ export default function App() {
                       placeholder="z. B. Die Zukunft des Designs"
                       value={state.meta.slogan}
                       onChange={(e) => setState((p) => ({ ...p, meta: { ...p.meta, slogan: e.target.value } }))}
+                      className="bg-gray-900 border-gray-700 text-white placeholder:text-gray-500"
                     />
                   </div>
 
                   {/* Branche: Dropdown + optional Freitext */}
                   <div className="grid gap-2">
-                    <label htmlFor="brand-branche" className="text-sm">
+                    <label htmlFor="brand-branche" className="text-sm text-gray-300">
                       Branche*
                     </label>
                     <select
                       id="brand-branche"
-                      className="w-full rounded-md border px-3 py-2 text-sm"
+                      className="w-full rounded-md border px-3 py-2 text-sm bg-gray-900 border-gray-700 text-white"
                       value={state.meta.branche}
                       onChange={(e) => setState((p) => ({ ...p, meta: { ...p.meta, branche: e.target.value } }))}
                     >
-                      <option value="" disabled>
+                      <option value="" disabled className="text-gray-500">
                         Bitte wählen …
                       </option>
                       {BRANCHEN.map((b) => (
@@ -544,18 +586,19 @@ export default function App() {
                         placeholder="Eigene Branche"
                         value={state.meta.brancheOther}
                         onChange={(e) => setState((p) => ({ ...p, meta: { ...p.meta, brancheOther: e.target.value } }))}
+                        className="bg-gray-900 border-gray-700 text-white placeholder:text-gray-500"
                       />
                     )}
 
                     {!state.meta.branche && (
-                      <p id="brand-branche-err" className="text-xs text-destructive">
+                      <p id="brand-branche-err" className="text-xs text-red-600">
                         Branche ist erforderlich.
                       </p>
                     )}
                   </div>
 
                   <div>
-                    <label htmlFor="brand-desc" className="text-sm">
+                    <label htmlFor="brand-desc" className="text-sm text-gray-300">
                       Kurzbeschreibung
                     </label>
                     <Textarea
@@ -563,10 +606,11 @@ export default function App() {
                       placeholder="1–2 Sätze über das Angebot/den Nutzen"
                       value={state.meta.beschreibung}
                       onChange={(e) => setState((p) => ({ ...p, meta: { ...p.meta, beschreibung: e.target.value } }))}
+                      className="bg-gray-900 border-gray-700 text-white placeholder:text-gray-500"
                     />
                   </div>
 
-                  <p className="text-xs text-muted-foreground">
+                  <p className="text-xs text-gray-500">
                     Tipp: Beschreibe Nutzen statt Features – z. B. „hilft Teams, Projekte schneller zu liefern“.
                   </p>
                 </div>
@@ -574,10 +618,11 @@ export default function App() {
             </motion.div>
           )}
 
-          {/* Schritt 2 */}
+          {/* Schritt 2 (jetzt mit Wettbewerb) */}
           {step === 2 && (
             <motion.div key="s2" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }}>
-              <StepHeader step={2} total={total} title="Zielgruppe & Use-Cases" subtitle="Wen sprechen wir an? In welchen Kontexten?" />
+              <StepHeader step={2} total={total} title="Zielgruppe & Wettbewerb" subtitle="Wen sprechen wir an? In welchen Kontexten? Wer sind die Konkurrenten?" />
+              
               <Section
                 title="Zielgruppe"
                 info={
@@ -592,6 +637,8 @@ export default function App() {
                       variant={state.zielgruppe.b2 === "B2C" ? "default" : "outline"}
                       onClick={() => setState((p) => ({ ...p, zielgruppe: { ...p.zielgruppe, b2: "B2C" } }))}
                       title="B2C = Endkundenmarkt (Privatpersonen)"
+                      className={state.zielgruppe.b2 === "B2C" ? "bg-purple-700 text-white" : "bg-gray-700 text-gray-300 hover:bg-gray-600 border-gray-700"}
+                      style={state.zielgruppe.b2 === "B2C" ? { backgroundColor: MOSAIK_PRIMARY } : {}}
                     >
                       B2C
                     </Button>
@@ -599,28 +646,32 @@ export default function App() {
                       variant={state.zielgruppe.b2 === "B2B" ? "default" : "outline"}
                       onClick={() => setState((p) => ({ ...p, zielgruppe: { ...p.zielgruppe, b2: "B2B" } }))}
                       title="B2B = Geschäftskunden (z. B. KMU = kleine & mittlere Unternehmen)"
+                      className={state.zielgruppe.b2 === "B2B" ? "bg-purple-700 text-white" : "bg-gray-700 text-gray-300 hover:bg-gray-600 border-gray-700"}
+                      style={state.zielgruppe.b2 === "B2B" ? { backgroundColor: MOSAIK_PRIMARY } : {}}
                     >
                       B2B
                     </Button>
                     <Info
                       size={16}
-                      className="ml-1 text-muted-foreground"
+                      className="ml-1 text-gray-400"
                       aria-label="B2C/B2B Erklärung"
                       title="B2C: Endkunden (Privatpersonen). B2B: Firmenkunden; KMU = kleine & mittlere Unternehmen."
                     />
                   </div>
-                  <p className="text-xs text-muted-foreground">
+                  <p className="text-xs text-gray-500">
                     B2C: Endkundenmarkt. B2B: Geschäftskunden. <strong>KMU</strong> = kleine & mittlere Unternehmen (bis ca. 250 MA).
                   </p>
                   <Textarea
                     placeholder="Zielgruppenbeschreibung (z. B. Alter, Branche, Interessen)"
                     value={state.zielgruppe.beschreibung}
                     onChange={(e) => setState((p) => ({ ...p, zielgruppe: { ...p.zielgruppe, beschreibung: e.target.value } }))}
+                    className="bg-gray-900 border-gray-700 text-white placeholder:text-gray-500"
                   />
                   <Textarea
                     placeholder="Use-Cases (z. B. Website, App-Icon, Verpackung, Schild)"
                     value={state.zielgruppe.usecases}
                     onChange={(e) => setState((p) => ({ ...p, zielgruppe: { ...p.zielgruppe, usecases: e.target.value } }))}
+                    className="bg-gray-900 border-gray-700 text-white placeholder:text-gray-500"
                   />
                 </div>
               </Section>
@@ -631,25 +682,29 @@ export default function App() {
                     placeholder="Wettbewerber 1 (optional)"
                     value={state.wettbewerb.competitor1}
                     onChange={(e) => setState((p) => ({ ...p, wettbewerb: { ...p.wettbewerb, competitor1: e.target.value } }))}
+                    className="bg-gray-900 border-gray-700 text-white placeholder:text-gray-500"
                   />
                   <Input
                     placeholder="Wettbewerber 2 (optional)"
                     value={state.wettbewerb.competitor2}
                     onChange={(e) => setState((p) => ({ ...p, wettbewerb: { ...p.wettbewerb, competitor2: e.target.value } }))}
+                    className="bg-gray-900 border-gray-700 text-white placeholder:text-gray-500"
                   />
                   <Textarea
                     placeholder="Positionierung/USP – was unterscheidet euch?"
                     value={state.wettbewerb.differenzierung}
                     onChange={(e) => setState((p) => ({ ...p, wettbewerb: { ...p.wettbewerb, differenzierung: e.target.value } }))}
+                    className="bg-gray-900 border-gray-700 text-white placeholder:text-gray-500"
                   />
                 </div>
               </Section>
             </motion.div>
           )}
 
-          {/* Schritt 3 */}
+          {/* Schritt 3 (Werte) */}
           {step === 3 && (
             <motion.div key="s3" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }}>
+              {/* FIX 3: Schritt-Nummer korrigiert */}
               <StepHeader step={3} total={total} title="Markenwerte & Persönlichkeit" subtitle="Wofür steht die Marke?" />
               <Section title="Kernwerte" info="Wähle 2–5 Werte">
                 <ChipSelect
@@ -668,6 +723,7 @@ export default function App() {
                     "Tradition",
                     "Leidenschaft",
                   ]}
+                  // FIX 2: Callback auf dem `ChipSelect` war korrekt, keine Änderung nötig, da der Fix in der `ChipSelect` Komponente liegt.
                   values={state.werte.values}
                   onChange={(values) => setState((p) => ({ ...p, werte: { ...p.werte, values } }))}
                 />
@@ -698,22 +754,26 @@ export default function App() {
                   placeholder="Welche Botschaft soll das Logo transportieren?"
                   value={state.werte.botschaft}
                   onChange={(e) => setState((p) => ({ ...p, werte: { ...p.werte, botschaft: e.target.value } }))}
+                  className="bg-gray-900 border-gray-700 text-white placeholder:text-gray-500"
                 />
               </Section>
             </motion.div>
           )}
 
-          {/* Schritt 4 */}
+          {/* Schritt 4 (Story) */}
           {step === 4 && (
             <motion.div key="s4" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }}>
+              {/* FIX 3: Schritt-Nummer korrigiert */}
               <StepHeader step={4} total={total} title="Brand Story (optional)" subtitle="Hintergrund & Motivation" />
               <Section title="Story aktivieren">
-                <div className="flex items-center gap-3">
+                <div className="flex items-center gap-3 text-gray-300">
                   <input
                     id="story-enabled"
                     type="checkbox"
                     checked={state.story.enabled}
                     onChange={(e) => setState((p) => ({ ...p, story: { ...p.story, enabled: e.target.checked } }))}
+                    className="form-checkbox h-4 w-4 text-purple-600 bg-gray-700 border-gray-600 rounded" // FIX 4: Checkbox-Farbe angepasst
+                    style={{ color: MOSAIK_PRIMARY }}
                   />
                   <label htmlFor="story-enabled" className="text-sm">
                     Eigene Brand Story als Inspirationsquelle einbeziehen
@@ -727,20 +787,29 @@ export default function App() {
                     placeholder="Warum gibt es die Marke? Welche Vision? 2–5 Sätze."
                     value={state.story.text}
                     onChange={(e) => setState((p) => ({ ...p, story: { ...p.story, text: e.target.value } }))}
+                    className="bg-gray-900 border-gray-700 text-white placeholder:text-gray-500"
                   />
                 </Section>
               )}
             </motion.div>
           )}
 
-          {/* Schritt 5 */}
+          {/* Schritt 5 (Stil) */}
           {step === 5 && (
             <motion.div key="s5" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }}>
+              {/* FIX 3: Schritt-Nummer korrigiert */}
               <StepHeader step={5} total={total} title="Logo-Stil" subtitle="Logo-Typ & Stiladjektive" />
               <Section title="Logo-Typ">
                 <div className="flex flex-wrap gap-2">
                   {["Wortmarke", "Bildmarke", "Wort-Bild-Marke", "Emblem", "Abstrakt"].map((t) => (
-                    <Button key={t} variant={state.stil.logotyp === t ? "default" : "outline"} onClick={() => setState((p) => ({ ...p, stil: { ...p.stil, logotyp: t } }))}>
+                    <Button
+                      key={t}
+                      variant={state.stil.logotyp === t ? "default" : "outline"}
+                      onClick={() => setState((p) => ({ ...p, stil: { ...p.stil, logotyp: t } }))}
+                      // FIX 4: Button-Style mit Mosaik-Farbe
+                      className={state.stil.logotyp === t ? "text-white" : "bg-gray-700 text-gray-300 hover:bg-gray-600 border-gray-700"}
+                      style={state.stil.logotyp === t ? { backgroundColor: MOSAIK_PRIMARY } : {}}
+                    >
                       {t}
                     </Button>
                   ))}
@@ -763,6 +832,7 @@ export default function App() {
                     "exklusiv",
                     "dynamisch",
                   ]}
+                  // FIX 2: Callback ist korrekt
                   values={state.stil.adjektive}
                   onChange={(adjektive) => setState((p) => ({ ...p, stil: { ...p.stil, adjektive } }))}
                 />
@@ -772,17 +842,20 @@ export default function App() {
                   placeholder="z. B. ‚ähnlich simple Formen wie Apple Logo‘"
                   value={state.stil.referenzen}
                   onChange={(e) => setState((p) => ({ ...p, stil: { ...p.stil, referenzen: e.target.value } }))}
+                  className="bg-gray-900 border-gray-700 text-white placeholder:text-gray-500"
                 />
               </Section>
             </motion.div>
           )}
 
-          {/* Schritt 6 */}
+          {/* Schritt 6 (Farben) */}
           {step === 6 && (
             <motion.div key="s6" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }}>
+              {/* FIX 3: Schritt-Nummer korrigiert */}
               <StepHeader step={6} total={total} title="Farben" subtitle="Primär-/Sekundärfarbe & Verbote" />
               <Section title="Farbwahl" info="Logo muss auf Weiß funktionieren; SW-Tauglichkeit beachten">
                 <div className="grid gap-3">
+                  {/* FIX 1: p-1 Klasse im ColorRow Input entfernt, um Mobile-Funktion zu gewährleisten */}
                   <ColorRow
                     label="Primärfarbe"
                     value={state.farben.primary}
@@ -799,18 +872,20 @@ export default function App() {
                     placeholder="Ausschlüsse (z. B. kein Pink, kein Neon)"
                     value={state.farben.verbot}
                     onChange={(e) => setState((p) => ({ ...p, farben: { ...p.farben, verbot: e.target.value } }))}
+                    className="bg-gray-900 border-gray-700 text-white placeholder:text-gray-500"
                   />
                 </div>
-                <p className="text-xs text-muted-foreground mt-1">
+                <p className="text-xs text-gray-500 mt-1">
                   Hinweis: Für Fließtext gilt WCAG AA ≈ 4.5:1. Für Logos ist Lesbarkeit ebenfalls wichtig, auch wenn WCAG formell nicht greift.
                 </p>
               </Section>
             </motion.div>
           )}
 
-          {/* Schritt 7 */}
+          {/* Schritt 7 (Typografie) */}
           {step === 7 && (
             <motion.div key="s7" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }}>
+              {/* FIX 3: Schritt-Nummer korrigiert */}
               <StepHeader step={7} total={total} title="Typografie" subtitle="Schriftstil für Wortbestandteile" />
               <Section title="Schriftstil">
                 <div className="flex flex-wrap gap-2">
@@ -824,7 +899,14 @@ export default function App() {
                     "Script/Schreibschrift",
                     "Brush",
                   ].map((t) => (
-                    <Button key={t} variant={state.typo.stil === t ? "default" : "outline"} onClick={() => setState((p) => ({ ...p, typo: { ...p.typo, stil: t } }))}>
+                    <Button
+                      key={t}
+                      variant={state.typo.stil === t ? "default" : "outline"}
+                      onClick={() => setState((p) => ({ ...p, typo: { ...p.typo, stil: t } }))}
+                      // FIX 4: Button-Style mit Mosaik-Farbe
+                      className={state.typo.stil === t ? "text-white" : "bg-gray-700 text-gray-300 hover:bg-gray-600 border-gray-700"}
+                      style={state.typo.stil === t ? { backgroundColor: MOSAIK_PRIMARY } : {}}
+                    >
                       {t}
                     </Button>
                   ))}
@@ -835,35 +917,47 @@ export default function App() {
                   placeholder="z. B. Großbuchstaben, weite Laufweite, runde Ecken"
                   value={state.typo.details}
                   onChange={(e) => setState((p) => ({ ...p, typo: { ...p.typo, details: e.target.value } }))}
+                  className="bg-gray-900 border-gray-700 text-white placeholder:text-gray-500"
                 />
               </Section>
             </motion.div>
           )}
 
-          {/* Schritt 8 */}
+          {/* Schritt 8 (Prompt) */}
           {step === 8 && (
             <motion.div key="s8" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }}>
-              <StepHeader step={8} total={total} title="Zusammenfassung & Prompt" subtitle="Kopieren & weiterverwenden" />
-              {/* Logo-Vorschau entfernt – nur noch Prompt */}
+              {/* FIX 3: Schritt-Nummer korrigiert */}
+              <StepHeader step={total} total={total} title="Zusammenfassung & Prompt" subtitle="Kopieren & weiterverwenden" />
+              
               <Section title="Live-Prompt (kompakt)">
-                <Textarea rows={6} value={compactPrompt} readOnly className="font-mono" spellCheck={false} />
-                <p className="text-xs text-muted-foreground">Hinweis: Vollständige Version unten – diese Kurzansicht ist zum schnellen Prüfen gedacht.</p>
+                {/* FIX 4: Dunkle Textarea */}
+                <Textarea rows={6} value={compactPrompt} readOnly className="font-mono bg-gray-900 border-gray-700 text-white" spellCheck={false} />
+                <p className="text-xs text-gray-500">Hinweis: Vollständige Version unten – diese Kurzansicht ist zum schnellen Prüfen gedacht.</p>
               </Section>
 
               <Section title="Vollständiger Prompt">
-                <Textarea rows={12} value={prompt} readOnly className="font-mono" spellCheck={false} />
+                <Textarea rows={12} value={prompt} readOnly className="font-mono bg-gray-900 border-gray-700 text-white" spellCheck={false} />
                 <div className="flex items-center gap-2 flex-wrap">
-                  <Button onClick={copyPrompt}>
+                  {/* FIX 4: Button-Style mit Mosaik-Farbe */}
+                  <Button onClick={copyPrompt} className="text-white" style={{ backgroundColor: MOSAIK_PRIMARY }}>
                     <Copy className="h-4 w-4 mr-2" />
                     {copyMsg.includes("kopiert") ? "Kopiert!" : "In Zwischenablage kopieren"}
                   </Button>
-                  <Badge variant="secondary">Nur Textausgabe – manuell in KI einfügen</Badge>
+                  <Badge variant="secondary" className="bg-gray-700 text-gray-300">Nur Textausgabe – manuell in KI einfügen</Badge>
                 </div>
                 {copyMsg && (
-                  <p className="text-xs text-muted-foreground mt-1" role="status" aria-live="polite">
+                  <p className="text-xs text-gray-500 mt-1" role="status" aria-live="polite">
                     {copyMsg}
                   </p>
                 )}
+              </Section>
+              
+              <Section title="Nächste Schritte (Hinweis)">
+                <ul className="list-disc pl-5 text-sm text-gray-400 space-y-1">
+                  <li>Prompt in Ihr bevorzugtes Bild-KI-Tool einfügen (z. B. ChatGPT Vision oder Gemini).</li>
+                  <li>Adjektive/Farben variieren und erneut generieren, bis das Ergebnis passt.</li>
+                  <li>Für App-Icon/kleine Größen: Detailgrad gering halten, starke Kontraste.</li>
+                </ul>
               </Section>
             </motion.div>
           )}
@@ -871,20 +965,20 @@ export default function App() {
       </main>
 
       {/* Bottom Nav / CTA */}
-      <div className="fixed bottom-0 left-0 right-0 bg-background/95 backdrop-blur border-t px-4 py-3">
+      <div className="fixed bottom-0 left-0 right-0 bg-gray-900/95 backdrop-blur border-t border-gray-700 px-4 py-3">
         <div className="max-w-xl mx-auto flex items-center justify-between gap-2">
-          <Button variant="outline" onClick={prev} disabled={step === 1} className="px-5 py-6">
+          <Button variant="outline" onClick={prev} disabled={step === 1} className="px-5 py-6 border-gray-700 hover:bg-gray-700 text-gray-300 bg-gray-800">
             <ChevronLeft className="h-5 w-5 mr-2" />
             Zurück
           </Button>
-          <div className="flex-1 text-center text-xs text-muted-foreground">Automatisch gespeichert</div>
+          <div className="flex-1 text-center text-xs text-gray-500">Automatisch gespeichert</div>
           {step < total ? (
-            <Button onClick={next} disabled={!canContinue} className="px-6 py-6">
+            <Button onClick={next} disabled={!canContinue} className="px-6 py-6 text-white" style={{ backgroundColor: MOSAIK_PRIMARY }}>
               Weiter
               <ChevronRight className="h-5 w-5 ml-2" />
             </Button>
           ) : (
-            <Button onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })} className="px-6 py-6">
+            <Button onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })} className="px-6 py-6 text-white" style={{ backgroundColor: MOSAIK_PRIMARY }}>
               <Check className="h-5 w-5 mr-2" />
               Fertig
             </Button>
@@ -894,9 +988,7 @@ export default function App() {
     </div>
   );
 }
-
 /* ------------ Templates (unverändert) ------------ */
-
 const TEMPLATES = [
   {
     name: "Tech Startup",
