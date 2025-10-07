@@ -1,22 +1,144 @@
 import React, { useEffect, useMemo, useState, useRef, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Check, ChevronLeft, ChevronRight, Copy, Trash2, RotateCcw, Info, Download, Upload, AlertTriangle, Sparkles } from "lucide-react";
-import {Button, Card, CardContent, CardHeader, CardTitle, Input, Textarea, Badge} from "./ui";
+import { Button, Card, CardContent, CardHeader, CardTitle, Input, Textarea, Badge } from "./ui";
 
-/**
- * AAA Logo Prompt Builder – Polished UI (Minimal & Klar)
- *
- * Ziel dieser Iteration:
- * - Minimalistischeres, luftigeres Layout (größere Abstände, klarere Hierarchie)
- * - Dezentere Card-Optik (soft shadow, runde Ecken, weniger Trennlinien)
- * - Stepper mit klaren, tappbaren Pills und besserer Lesbarkeit
- * - Konsequent größere Touch-Ziele (mobile-first)
- * - Bessere visuelle Ordnung (einheitliche Margin/Padding-Scale)
- * - Microcopy bleibt, aber dezenter (muted)
- * - Alle Features bleiben erhalten (Templates, Import/Export, Autosave, Kontrast-Check, Live-Prompt, Copy, Weiß-Hintergrund)
- */
+/* ------------ kleine Helfer ------------ */
 
-// --- Helper Components ---
+const STORAGE_KEY = "aaa-logo-builder-state-v4";
+
+// Dropdown: Branchen
+const BRANCHEN = [
+  "Software/Tech",
+  "Finanzen/Jura",
+  "Gesundheit/Medizin",
+  "Bio-Lebensmittel",
+  "Gastronomie/Hotel",
+  "Einzelhandel/E-Commerce",
+  "Bildung",
+  "Sport/Fitness",
+  "Mode/Beauty",
+  "Architektur/Bau",
+  "Immobilien",
+  "Automotive/Mobilität",
+  "Kreativ/Agentur",
+  "Non-Profit",
+  "Medien/Entertainment",
+  "Reisen/Tourismus",
+  "Industrie/Produktion",
+  "Energie/GreenTech",
+  "Logistik",
+  "Sonstige (Freitext)",
+];
+
+// debounce
+const debounce = (fn, wait = 400) => {
+  let t;
+  return (...args) => {
+    clearTimeout(t);
+    t = setTimeout(() => fn(...args), wait);
+  };
+};
+
+// Farbe normalisieren: akzeptiert #RGB, #RRGGBB oder CSS-Namen -> #RRGGBB
+const toHex6 = (val) => {
+  const s = String(val || "").trim();
+  if (!s) return null;
+  const hex3 = /^#([0-9a-f]{3})$/i;
+  const hex6 = /^#([0-9a-f]{6})$/i;
+  if (hex6.test(s)) return s.toUpperCase();
+  if (hex3.test(s)) {
+    const m = s.match(hex3)[1];
+    return ("#" + m[0] + m[0] + m[1] + m[1] + m[2] + m[2]).toUpperCase();
+  }
+  // CSS-Farbnamen -> Canvas-Trick
+  try {
+    const d = document.createElement("span");
+    d.style.color = "#000";
+    d.style.color = s;
+    // wenn ungültig, bleibt "#000"
+    const rgb = getComputedStyle(d).color; // rgb(r, g, b)
+    const m2 = rgb.match(/^rgb\((\d+),\s*(\d+),\s*(\d+)\)$/i);
+    if (!m2) return null;
+    const r = Number(m2[1]), g = Number(m2[2]), b = Number(m2[3]);
+    const to2 = (n) => n.toString(16).padStart(2, "0");
+    return ("#" + to2(r) + to2(g) + to2(b)).toUpperCase();
+  } catch {
+    return null;
+  }
+};
+
+// Kontrastrechner (gegen Weiß)
+const hexToRgb = (hex) => {
+  const c = (hex || "").replace("#", "");
+  if (!c || (c.length !== 6 && c.length !== 3)) return { r: 0, g: 0, b: 0 };
+  const norm = c.length === 3 ? c.split("").map((x) => x + x).join("") : c;
+  const num = parseInt(norm, 16);
+  return { r: (num >> 16) & 255, g: (num >> 8) & 255, b: num & 255 };
+};
+const relLuminance = ({ r, g, b }) => {
+  const srgb = [r, g, b].map((v) => {
+    v /= 255;
+    return v <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4);
+  });
+  return 0.2126 * srgb[0] + 0.7152 * srgb[1] + 0.0722 * srgb[2];
+};
+const contrastWithWhite = (anyColor) => {
+  try {
+    const hex = toHex6(anyColor);
+    if (!hex) return null;
+    const L1 = relLuminance(hexToRgb(hex));
+    const L2 = relLuminance({ r: 255, g: 255, b: 255 });
+    const ratio = (Math.max(L1, L2) + 0.05) / (Math.min(L1, L2) + 0.05);
+    if (!isFinite(ratio)) return null;
+    return Number(ratio.toFixed(2));
+  } catch {
+    return null;
+  }
+};
+
+/* ------------ persistenter State ------------ */
+
+const defaultState = {
+  meta: { name: "", slogan: "", branche: "", brancheOther: "", beschreibung: "" },
+  zielgruppe: { beschreibung: "", b2: "B2C", usecases: "" },
+  wettbewerb: { competitor1: "", competitor2: "", differenzierung: "" },
+  werte: { values: ["Vertrauen", "Qualität"], persoenlichkeit: ["modern", "freundlich"], botschaft: "" },
+  story: { enabled: false, text: "" },
+  stil: { logotyp: "Wort-Bild-Marke", adjektive: ["minimalistisch", "elegant"], referenzen: "" },
+  farben: { primary: "#0F172A", secondary: "#22C55E", verbot: "" },
+  typo: { stil: "serifenlos modern", details: "" },
+};
+
+function usePersistentState() {
+  const [state, setState] = useState(() => {
+    try {
+      const raw = localStorage.getItem(STORAGE_KEY);
+      return raw ? JSON.parse(raw) : defaultState;
+    } catch (_) {
+      return defaultState;
+    }
+  });
+
+  useEffect(() => {
+    const save = debounce((s) => {
+      try {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(s));
+      } catch {}
+    }, 450);
+    save(state);
+  }, [state]);
+
+  const reset = () => setState(defaultState);
+  const clearStorage = () => {
+    localStorage.removeItem(STORAGE_KEY);
+    setState(defaultState);
+  };
+  return { state, setState, reset, clearStorage };
+}
+
+/* ------------ UI-Bausteine ------------ */
+
 const StepHeader = ({ step, total, title, subtitle }) => (
   <div className="mb-5">
     <div className="flex items-start justify-between gap-3">
@@ -24,7 +146,9 @@ const StepHeader = ({ step, total, title, subtitle }) => (
         <h2 className="text-2xl font-semibold tracking-tight">{title}</h2>
         {subtitle && <p className="text-sm text-muted-foreground mt-1 leading-relaxed">{subtitle}</p>}
       </div>
-      <div className="text-xs text-muted-foreground mt-1">Schritt {step} / {total}</div>
+      <div className="text-xs text-muted-foreground mt-1">
+        Schritt {step} / {total}
+      </div>
     </div>
     <div className="w-full h-2 bg-muted rounded-full mt-4 overflow-hidden">
       <motion.div
@@ -44,7 +168,6 @@ const Section = ({ title, children, info, danger }) => (
         {title}
         {info && (
           <span className="text-muted-foreground text-xs font-normal flex items-center gap-1">
-            {/* FIX 5: Info-Icon als dekorativ kennzeichnen */}
             <Info size={14} aria-hidden="true" />
             {info}
           </span>
@@ -70,7 +193,9 @@ const Stepper = ({ step, setStep, labels, onKeyDown }) => (
               aria-controls={`panel-${s}`}
               id={`tab-${s}`}
               onClick={() => setStep(s)}
-              className={`px-3 py-1.5 rounded-full text-sm border whitespace-nowrap transition-colors ${active ? "bg-primary text-primary-foreground border-primary" : "bg-muted/40 hover:bg-muted"}`}
+              className={`px-3 py-1.5 rounded-full text-sm border whitespace-nowrap transition-colors ${
+                active ? "bg-primary text-primary-foreground border-primary" : "bg-muted/40 hover:bg-muted"
+              }`}
             >
               {s}. {label}
             </button>
@@ -81,213 +206,166 @@ const Stepper = ({ step, setStep, labels, onKeyDown }) => (
   </div>
 );
 
+// ChipSelect mit echten Checkboxes (verlässlich tippbar)
+const ChipSelect = ({ options, values, onChange, name = "chip" }) => {
+  const selected = new Set(values || []);
+  const toggle = useCallback(
+    (val) => {
+      const s = new Set(selected);
+      s.has(val) ? s.delete(val) : s.add(val);
+      onChange(Array.from(s));
+    },
+    [selected, onChange]
+  );
 
-// --- Defaults & Local Storage ---
-const STORAGE_KEY = "aaa-logo-builder-state-v3";
-
-const defaultState = {
-  meta: { name: "", slogan: "", branche: "", beschreibung: "" },
-  zielgruppe: { beschreibung: "", b2: "B2C", usecases: "" },
-  wettbewerb: { competitor1: "", competitor2: "", differenzierung: "" },
-  werte: { values: ["Vertrauen", "Qualität"], persoenlichkeit: ["modern", "freundlich"], botschaft: "" },
-  story: { enabled: false, text: "" },
-  stil: { logotyp: "Wort-Bild-Marke", adjektive: ["minimalistisch", "elegant"], referenzen: "" },
-  farben: { primary: "#0F172A", secondary: "#22C55E", verbot: "" },
-  typo: { stil: "serifenlos modern", details: "" },
+  return (
+    <div className="flex flex-wrap gap-2">
+      {options.map((o) => {
+        const checked = selected.has(o);
+        const id = `${name}-${o}`;
+        return (
+          <label
+            key={o}
+            htmlFor={id}
+            className={`px-3 py-2 rounded-2xl border text-sm cursor-pointer select-none ${
+              checked ? "bg-primary text-primary-foreground" : "bg-background hover:bg-muted"
+            }`}
+          >
+            <input id={id} type="checkbox" checked={checked} onChange={() => toggle(o)} className="sr-only" />
+            {o}
+          </label>
+        );
+      })}
+    </div>
+  );
 };
 
-// FIX 2: Kleiner Helper für Debounce
-const debounce = (fn, wait = 400) => {
-  let t;
-  return (...args) => {
-    clearTimeout(t);
-    t = setTimeout(() => fn(...args), wait);
-  };
+// Farbzeile mit Normalisierung & Vorschau
+const ColorRow = ({ label, value, onChange, contrast }) => {
+  const normalized = useMemo(() => toHex6(value), [value]);
+  const swatch = normalized || value || "#FFFFFF";
+
+  return (
+    <div className="flex items-center gap-3 flex-wrap">
+      <label className="text-sm w-36">{label}</label>
+      <Input
+        type="color"
+        value={normalized || "#FFFFFF"}
+        onChange={(e) => onChange(e.target.value)}
+        className="h-10 w-16 p-1"
+        aria-label={`${label} (Farbfeld)`}
+        title="Farbfeld – klick zum Wählen"
+      />
+      <Input
+        placeholder="#HEX oder Farbnamen (z. B. royalblue)"
+        value={value}
+        onChange={(e) => {
+          const raw = e.target.value;
+          const norm = toHex6(raw);
+          onChange(norm || raw); // rohen Wert erlauben; norm greift, sobald valide
+        }}
+        aria-label={`${label} (Textfeld)`}
+      />
+      <span
+        className="inline-block w-7 h-7 rounded-lg border"
+        style={{ background: swatch }}
+        title={`Vorschau: ${swatch}`}
+        aria-label={`Farbvorschau ${swatch}`}
+      />
+      {Number.isFinite(contrast) && (
+        <Badge variant={contrast >= 4.5 ? "default" : contrast >= 3 ? "secondary" : "destructive"}>
+          Kontrast zu Weiß: {contrast}:1 {contrast < 4.5 && <span className="flex items-center gap-1 ml-1"><AlertTriangle size={14} aria-hidden />niedrig</span>}
+        </Badge>
+      )}
+    </div>
+  );
 };
 
-function usePersistentState() {
-  const [state, setState] = useState(() => {
-    try {
-      const raw = localStorage.getItem(STORAGE_KEY);
-      return raw ? JSON.parse(raw) : defaultState;
-    } catch (_) {
-      return defaultState;
-    }
-  });
-  
-  // FIX 2: Debounced Autosave
-  useEffect(() => {
-    const save = debounce((s) => {
-      try { localStorage.setItem(STORAGE_KEY, JSON.stringify(s)); } catch {}
-    }, 450);
-    save(state);
-  }, [state]);
+/* ------------ Promptbuilder ------------ */
 
-  const reset = () => setState(defaultState);
-  const clearStorage = () => { localStorage.removeItem(STORAGE_KEY); setState(defaultState); };
-  return { state, setState, reset, clearStorage };
-}
-
-// --- Utilities ---
-const hexToRgb = (hex) => {
-  let c = (hex||"").replace('#','');
-  if (!c) return {r:0,g:0,b:0};
-  if (c.length===3) c = c.split('').map(x=>x+x).join('');
-  const num = parseInt(c, 16);
-  return { r: (num >> 16) & 255, g: (num >> 8) & 255, b: num & 255 };
-};
-const relLuminance = ({r,g,b})=>{
-  const srgb = [r,g,b].map(v=>{
-    v/=255; return v<=0.03928? v/12.92 : Math.pow((v+0.055)/1.055, 2.4);
-  });
-  return 0.2126*srgb[0]+0.7152*srgb[1]+0.0722*srgb[2];
-};
-const contrastWithWhite = (hexColor)=>{
-  try{
-    const L1 = relLuminance(hexToRgb(hexColor));
-    const L2 = relLuminance({r:255,g:255,b:255});
-    const ratio = (Math.max(L1,L2)+0.05)/(Math.min(L1,L2)+0.05);
-    // FIX 6: Besserer Farb-Guard
-    if (!isFinite(ratio)) return null;
-    return Number(ratio.toFixed(2));
-  }catch{return null}
-};
-
-// --- Prompt Synthese ---
 function buildPrompt(s) {
-const parts = [];
+  const parts = [];
   const name = s.meta.name?.trim() || "[Markenname]";
-  const branche = s.meta.branche?.trim() || "[Branche]";
+  const branche = (s.meta.branche === "Sonstige (Freitext)" ? s.meta.brancheOther : s.meta.branche) || "[Branche]";
   const slogan = s.meta.slogan?.trim();
+
   parts.push(`Erstelle ein professionelles, vektorähnliches Logo für "${name}" (Branche: ${branche}).`);
   if (slogan) parts.push(`Optionaler Claim/Slogan: "${slogan}".`);
   if (s.meta.beschreibung) parts.push(`Kurzbeschreibung: ${s.meta.beschreibung}`);
+
   if (s.zielgruppe.beschreibung || s.zielgruppe.b2 || s.zielgruppe.usecases) {
     const audience = [s.zielgruppe.b2, s.zielgruppe.beschreibung].filter(Boolean).join(", ");
     const usecases = s.zielgruppe.usecases ? `, Use-Cases: ${s.zielgruppe.usecases}` : "";
     parts.push(`Zielgruppe: ${audience}${usecases}.`);
   }
+
   if (s.wettbewerb.competitor1 || s.wettbewerb.competitor2 || s.wettbewerb.differenzierung) {
     const comps = [s.wettbewerb.competitor1, s.wettbewerb.competitor2].filter(Boolean).join(", ");
     if (comps) parts.push(`Wettbewerbsumfeld: ${comps}.`);
     if (s.wettbewerb.differenzierung) parts.push(`Positionierung/USP: ${s.wettbewerb.differenzierung}.`);
   }
+
   if (s.werte.values?.length || s.werte.persoenlichkeit?.length || s.werte.botschaft) {
     const vals = s.werte.values?.length ? `Werte: ${s.werte.values.join(", ")}.` : "";
     const pers = s.werte.persoenlichkeit?.length ? `Markenpersönlichkeit: ${s.werte.persoenlichkeit.join(", ")}.` : "";
     const msg = s.werte.botschaft ? `Zentrale Botschaft: ${s.werte.botschaft}.` : "";
     parts.push([vals, pers, msg].filter(Boolean).join(" "));
   }
+
   if (s.story.enabled && s.story.text) parts.push(`Brand Story (Kurzform, als Inspirationsquelle): ${s.story.text}`);
+
   if (s.stil.logotyp || s.stil.adjektive?.length || s.stil.referenzen) {
     const logotyp = s.stil.logotyp ? `Logo-Typ: ${s.stil.logotyp}.` : "";
     const adj = s.stil.adjektive?.length ? `Stil: ${s.stil.adjektive.join(", ")}.` : "";
     const ref = s.stil.referenzen ? `Visuelle Referenzen/Anmutung: ${s.stil.referenzen}.` : "";
     parts.push([logotyp, adj, ref].filter(Boolean).join(" "));
   }
+
   const farbBits = [];
-  if (s.farben.primary) farbBits.push(`Primärfarbe ${s.farben.primary}`);
-  if (s.farben.secondary) farbBits.push(`Sekundärfarbe ${s.farben.secondary}`);
+  if (s.farben.primary) farbBits.push(`Primärfarbe ${toHex6(s.farben.primary) || s.farben.primary}`);
+  if (s.farben.secondary) farbBits.push(`Sekundärfarbe ${toHex6(s.farben.secondary) || s.farben.secondary}`);
   if (s.farben.verbot) farbBits.push(`Keine: ${s.farben.verbot}`);
   if (farbBits.length) parts.push(`Farbwelt: ${farbBits.join(", ")}.`);
+
   if (s.typo.stil || s.typo.details) parts.push(`Typografie: ${[s.typo.stil, s.typo.details].filter(Boolean).join("; ")}.`);
+
   parts.push("Anforderungen: minimalistisch, klar erkennbar, skalierbar, zeitlos, hohe Lesbarkeit. Vermeide übermäßige Details; setze auf klare geometrische Formen und flache Farben.");
   parts.push("Ausgabe auf weißem Hintergrund (rein weiß). Liefere 1–3 Varianten mit geringfügigen Stil- oder Kompositionsunterschieden.");
   parts.push("Wenn Text enthalten ist: korrekte Schreibweise des Markennamens, keine Fantasyschrift nur der Optik wegen.");
+
   const text = parts
-  .filter(Boolean)
-  .map(p => String(p).trim())
-  .filter(p => p.length > 0)
-  .join("\n")
-  .replace(/\n{3,}/g, "\n\n");
-return text;
+    .filter(Boolean)
+    .map((p) => String(p).trim())
+    .filter((p) => p.length > 0)
+    .join("\n")
+    .replace(/\n{3,}/g, "\n\n");
+  return text;
 }
 
-// --- Multi-select Chips ---
-const ChipSelect = ({ options, values, onChange }) => {
-  const toggle = (val) => {
-    const set = new Set(values || []);
-    set.has(val) ? set.delete(val) : set.add(val);
-    onChange(Array.from(set));
-  };
-  return (
-    <div className="flex flex-wrap gap-2">
-      {options.map((o) => (
-        // FIX 3: ChipSelect assistiver machen (role & aria-checked)
-        <button
-          key={o}
-          type="button"
-          role="checkbox"
-          aria-checked={values?.includes(o) || false}
-          onClick={() => toggle(o)}
-          className={`px-3 py-2 rounded-2xl border text-sm transition-colors ${values?.includes(o) ? "bg-primary text-primary-foreground" : "bg-background hover:bg-muted"}`}
-        >
-          {o}
-        </button>
-      ))}
-    </div>
-  );
-};
+/* ------------ Hauptkomponente ------------ */
 
-// --- Templates ---
-const TEMPLATES = [
-  {
-    name: "Tech Startup",
-    apply: (set) => set((p)=>({
-      ...p,
-      meta:{...p.meta, branche:"Software/Tech", beschreibung:"Cloud-basierte Produktivitäts-App"},
-      zielgruppe:{...p.zielgruppe, b2:"B2B", beschreibung:"KMU, 20–200 MA, digital-affin", usecases:"Website, App-Icon, Pitch-Deck"},
-      werte:{...p.werte, values:["Innovation","Qualität","Transparenz"], persoenlichkeit:["modern","technisch","freundlich"]},
-      stil:{...p.stil, logotyp:"Wort-Bild-Marke", adjektive:["minimalistisch","geometrisch","professionell"], referenzen:"schlichte geometrische Formen"},
-      farben:{...p.farben, primary:"#0EA5E9", secondary:"#111827", verbot:"kein Neon"},
-      typo:{...p.typo, stil:"serifenlos modern", details:"Großbuchstaben, weite Laufweite"},
-    }))
-  },
-  {
-    name: "Bio/Food",
-    apply: (set)=>set((p)=>({
-      ...p,
-      meta:{...p.meta, branche:"Bio-Lebensmittel", beschreibung:"Regionale, nachhaltige Produkte"},
-      zielgruppe:{...p.zielgruppe, b2:"B2C", beschreibung:"Familien & gesundheitsbewusste Käufer", usecases:"Verpackung, Ladenbeschriftung, Social"},
-      werte:{...p.werte, values:["Nachhaltigkeit","Qualität","Gemeinschaft"], persoenlichkeit:["warm","organisch","bodenständig"]},
-      stil:{...p.stil, logotyp:"Emblem", adjektive:["organisch","freundlich","vintage"], referenzen:"natürliche Formen"},
-      farben:{...p.farben, primary:"#2F855A", secondary:"#A3B18A", verbot:"keine Neonfarben"},
-      typo:{...p.typo, stil:"Serif klassisch", details:"runde Ecken"},
-    }))
-  },
-  {
-    name: "Finance/Legal",
-    apply: (set)=>set((p)=>({
-      ...p,
-      meta:{...p.meta, branche:"Finanzen/Jura", beschreibung:"Beratung & Vermögensverwaltung"},
-      zielgruppe:{...p.zielgruppe, b2:"B2B", beschreibung:"C-Level, Investoren", usecases:"Website, Briefkopf, Präsentationen"},
-      werte:{...p.werte, values:["Vertrauen","Stabilität","Diskretion"], persoenlichkeit:["seriös","elegant","minimalistisch"]},
-      stil:{...p.stil, logotyp:"Wortmarke", adjektive:["elegant","geometrisch","zeitlos"], referenzen:"dezente Monogramm-Anmutung"},
-      farben:{...p.farben, primary:"#0B2447", secondary:"#576CBC", verbot:"keine grellen Farben"},
-      typo:{...p.typo, stil:"Serif klassisch", details:"feine Strichstärken, enge Laufweite"},
-    }))
-  }
-];
-
-// --- Main Component ---
 export default function App() {
   const { state, setState, reset, clearStorage } = usePersistentState();
   const [step, setStep] = useState(1);
-  // FIX 4: Status für Copy-Feedback
   const [copyMsg, setCopyMsg] = useState("");
+  const fileInputRef = useRef(null);
 
-const fileInputRef = useRef(null);
-
-  const labels = [
-    "Basis", "Zielgruppe", "Wettbewerb", "Werte", "Story", "Stil", "Farben", "Typo/Prompt"
-  ];
+  const labels = ["Basis", "Zielgruppe", "Wettbewerb", "Werte", "Story", "Stil", "Farben", "Typo/Prompt"];
   const total = labels.length;
 
-  const onKeyDown = useCallback((e) => {
-    if (e.key === "ArrowRight") { e.preventDefault(); setStep(s => Math.min(labels.length, s + 1)); }
-    if (e.key === "ArrowLeft")  { e.preventDefault(); setStep(s => Math.max(1, s - 1)); }
-  }, [labels.length]);
-
+  const onKeyDown = useCallback(
+    (e) => {
+      if (e.key === "ArrowRight") {
+        e.preventDefault();
+        setStep((s) => Math.min(labels.length, s + 1));
+      }
+      if (e.key === "ArrowLeft") {
+        e.preventDefault();
+        setStep((s) => Math.max(1, s - 1));
+      }
+    },
+    [labels.length]
+  );
 
   const next = () => setStep((s) => Math.min(total, s + 1));
   const prev = () => setStep((s) => Math.max(1, s - 1));
@@ -302,16 +380,14 @@ const fileInputRef = useRef(null);
       clearStorage();
     }
   }, [clearStorage]);
-  
-  const prompt = useMemo(() => buildPrompt(state), [state]);
-const compactPrompt = useMemo(() => {
-  const lines = prompt.split("\n");
-  const head = lines.slice(0, 5).join("\n");
-  return lines.length > 5 ? head + "\n…" : head;
-}, [prompt]);
 
-  const [copied, setCopied] = useState(false);
-  // FIX 4: Copy-Feedback mit Error-Handling
+  const prompt = useMemo(() => buildPrompt(state), [state]);
+  const compactPrompt = useMemo(() => {
+    const lines = prompt.split("\n");
+    const head = lines.slice(0, 5).join("\n");
+    return lines.length > 5 ? head + "\n…" : head;
+  }, [prompt]);
+
   const copyPrompt = async () => {
     try {
       await navigator.clipboard.writeText(prompt);
@@ -319,282 +395,475 @@ const compactPrompt = useMemo(() => {
     } catch {
       setCopyMsg("Kopieren fehlgeschlagen – bitte manuell markieren");
     }
-    setTimeout(()=>setCopyMsg(""), 1800);
+    setTimeout(() => setCopyMsg(""), 1800);
   };
 
   const canContinue = useMemo(() => {
-    if (step === 1) return state.meta.name.trim().length > 1 && state.meta.branche.trim().length > 0;
+    if (step === 1) {
+      const brancheOk =
+        state.meta.branche && (state.meta.branche !== "Sonstige (Freitext)" || state.meta.brancheOther.trim().length > 0);
+      return state.meta.name.trim().length > 1 && brancheOk;
+    }
     return true;
   }, [step, state]);
 
   // Import/Export
   const exportJSON = () => {
-    const blob = new Blob([JSON.stringify(state, null, 2)], { type: 'application/json' });
+    const blob = new Blob([JSON.stringify(state, null, 2)], { type: "application/json" });
     const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url; a.download = `aaa-logo-entwurf-${Date.now()}.json`; a.click();
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `aaa-logo-entwurf-${Date.now()}.json`;
+    a.click();
     URL.revokeObjectURL(url);
   };
   const importJSON = (file) => {
     const reader = new FileReader();
-    reader.onload = (e)=>{
-      try { const data = JSON.parse(e.target.result); setState(data);           if (fileInputRef.current) fileInputRef.current.value = "";
-} catch { /* ignore */ }
+    reader.onload = (e) => {
+      try {
+        const data = JSON.parse(e.target.result);
+        setState(data);
+        if (fileInputRef.current) fileInputRef.current.value = "";
+      } catch {}
     };
     reader.readAsText(file);
   };
 
-  // Contrast calc
-  const contrastPrimary = useMemo(()=>contrastWithWhite(state.farben.primary), [state.farben.primary]);
-  const contrastSecondary = useMemo(()=>contrastWithWhite(state.farben.secondary), [state.farben.secondary]);
+  // Kontrast mit normalisierten Farben
+  const contrastPrimary = useMemo(() => contrastWithWhite(state.farben.primary), [state.farben.primary]);
+  const contrastSecondary = useMemo(() => contrastWithWhite(state.farben.secondary), [state.farben.secondary]);
 
   return (
     <div className="min-h-screen bg-background text-foreground max-w-xl mx-auto">
       {/* Topbar */}
       <header className="sticky top-0 z-20 bg-background/90 backdrop-blur border-b">
         <div className="py-3 px-4 flex items-center justify-between gap-2">
+          {/* Nur Icon (kein Logotext) */}
           <div className="flex items-center gap-2">
-            <Sparkles className="h-5 w-5" aria-hidden="true"/>
-            <div className="font-semibold tracking-tight">AAA Logo Prompt Builder</div>
+            <Sparkles className="h-5 w-5" aria-hidden="true" />
           </div>
           <div className="flex gap-2">
-            <Button variant="outline" size="sm" onClick={exportJSON}><Download className="h-4 w-4 mr-1"/>Export</Button>
-<input
-  ref={fileInputRef}
-  type="file"
-  accept="application/json"
-  className="hidden"
-  onChange={(e)=>importJSON(e.target.files?.[0])}
-/>
-<Button variant="outline" size="sm" onClick={()=>fileInputRef.current?.click()}>
-  <Upload className="h-4 w-4 mr-1" />Import
-</Button>
-            <Button variant="destructive" size="icon" onClick={handleReset} title="Zurücksetzen"><RotateCcw className="h-5 w-5"/></Button>
-            <Button variant="destructive" size="icon" onClick={handleClear} title="Entwurf löschen"><Trash2 className="h-5 w-5"/></Button>
+            <Button variant="outline" size="sm" onClick={exportJSON}>
+              <Download className="h-4 w-4 mr-1" />
+              Export
+            </Button>
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="application/json"
+              className="hidden"
+              onChange={(e) => importJSON(e.target.files?.[0])}
+            />
+            <Button variant="outline" size="sm" onClick={() => fileInputRef.current?.click()}>
+              <Upload className="h-4 w-4 mr-1" />
+              Import
+            </Button>
+            <Button variant="destructive" size="icon" onClick={handleReset} title="Zurücksetzen">
+              <RotateCcw className="h-5 w-5" />
+            </Button>
+            <Button variant="destructive" size="icon" onClick={handleClear} title="Entwurf löschen">
+              <Trash2 className="h-5 w-5" />
+            </Button>
           </div>
         </div>
-        <Stepper step={step} setStep={setStep} labels={labels}  onKeyDown={onKeyDown} />
+        <Stepper step={step} setStep={setStep} labels={labels} onKeyDown={onKeyDown} />
       </header>
 
       <main className="p-4 pb-32">
         <AnimatePresence mode="popLayout">
+          {/* Schritt 1 */}
           {step === 1 && (
             <motion.div key="s1" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }}>
               <StepHeader step={1} total={total} title="Markenbasis" subtitle="Name, Slogan, Branche, Kurzbeschreibung" />
 
               <Section title="Schnellstart-Templates" info="Spart Zeit – später alles anpassbar">
                 <div className="flex gap-2 flex-wrap">
-                  {TEMPLATES.map(t=> (
-                    <Button key={t.name} variant="secondary" size="sm" onClick={()=>t.apply(setState)}>{t.name}</Button>
+                  {TEMPLATES.map((t) => (
+                    <Button key={t.name} variant="secondary" size="sm" onClick={() => t.apply(setState)}>
+                      {t.name}
+                    </Button>
                   ))}
                 </div>
               </Section>
 
               <Section title="Grunddaten" info="Pflichtfelder sind mit * gekennzeichnet">
                 <div className="grid gap-3">
-                  {/* FIX 1: Sichtbare Labels für Name */}
                   <div>
-                    <label htmlFor="brand-name" className="text-sm">Marken-/Firmenname*</label>
-                    <Input id="brand-name" placeholder="z. B. LogoGen" value={state.meta.name} onChange={(e)=>setState(p=>({...p, meta:{...p.meta, name:e.target.value}}))} aria-describedby={(!state.meta.name || state.meta.name.trim().length<2) ? "brand-name-err" : undefined} />
-                    {(!state.meta.name || state.meta.name.trim().length<2) && (
-                      <p id="brand-name-err" className="text-xs text-destructive mt-1">Bitte einen gültigen Markennamen angeben.</p>
+                    <label htmlFor="brand-name" className="text-sm">
+                      Marken-/Firmenname*
+                    </label>
+                    <Input
+                      id="brand-name"
+                      placeholder="z. B. LogoGen"
+                      value={state.meta.name}
+                      onChange={(e) => setState((p) => ({ ...p, meta: { ...p.meta, name: e.target.value } }))}
+                      aria-describedby={!state.meta.name || state.meta.name.trim().length < 2 ? "brand-name-err" : undefined}
+                    />
+                    {(!state.meta.name || state.meta.name.trim().length < 2) && (
+                      <p id="brand-name-err" className="text-xs text-destructive mt-1">
+                        Bitte einen gültigen Markennamen angeben.
+                      </p>
                     )}
                   </div>
-                  {/* FIX 1: Sichtbare Labels für Slogan */}
+
                   <div>
-                    <label htmlFor="brand-claim" className="text-sm">Claim/Slogan (optional)</label>
-                    <Input id="brand-claim" placeholder="z. B. Die Zukunft des Designs" value={state.meta.slogan} onChange={(e)=>setState(p=>({...p, meta:{...p.meta, slogan:e.target.value}}))} />
+                    <label htmlFor="brand-claim" className="text-sm">
+                      Claim/Slogan (optional)
+                    </label>
+                    <Input
+                      id="brand-claim"
+                      placeholder="z. B. Die Zukunft des Designs"
+                      value={state.meta.slogan}
+                      onChange={(e) => setState((p) => ({ ...p, meta: { ...p.meta, slogan: e.target.value } }))}
+                    />
                   </div>
-                  {/* FIX 1: Sichtbare Labels für Branche */}
-                  <div>
-                    <label htmlFor="brand-branche" className="text-sm">Branche*</label>
-                    <Input id="brand-branche" placeholder="z. B. FinTech, Bio-Lebensmittel, Architektur" value={state.meta.branche} onChange={(e)=>setState(p=>({...p, meta:{...p.meta, branche:e.target.value}}))} aria-describedby={!state.meta.branche ? "brand-branche-err" : undefined} />
+
+                  {/* Branche: Dropdown + optional Freitext */}
+                  <div className="grid gap-2">
+                    <label htmlFor="brand-branche" className="text-sm">
+                      Branche*
+                    </label>
+                    <select
+                      id="brand-branche"
+                      className="w-full rounded-md border px-3 py-2 text-sm"
+                      value={state.meta.branche}
+                      onChange={(e) => setState((p) => ({ ...p, meta: { ...p.meta, branche: e.target.value } }))}
+                    >
+                      <option value="" disabled>
+                        Bitte wählen …
+                      </option>
+                      {BRANCHEN.map((b) => (
+                        <option key={b} value={b}>
+                          {b}
+                        </option>
+                      ))}
+                    </select>
+
+                    {state.meta.branche === "Sonstige (Freitext)" && (
+                      <Input
+                        placeholder="Eigene Branche"
+                        value={state.meta.brancheOther}
+                        onChange={(e) => setState((p) => ({ ...p, meta: { ...p.meta, brancheOther: e.target.value } }))}
+                      />
+                    )}
+
                     {!state.meta.branche && (
-                      <p id="brand-branche-err" className="text-xs text-destructive mt-1">Branche ist erforderlich.</p>
+                      <p id="brand-branche-err" className="text-xs text-destructive">
+                        Branche ist erforderlich.
+                      </p>
                     )}
                   </div>
-                  {/* FIX 1: Sichtbare Labels für Beschreibung */}
+
                   <div>
-                    <label htmlFor="brand-desc" className="text-sm">Kurzbeschreibung</label>
-                    <Textarea id="brand-desc" placeholder="1–2 Sätze über das Angebot/den Nutzen" value={state.meta.beschreibung} onChange={(e)=>setState(p=>({...p, meta:{...p.meta, beschreibung:e.target.value}}))} />
+                    <label htmlFor="brand-desc" className="text-sm">
+                      Kurzbeschreibung
+                    </label>
+                    <Textarea
+                      id="brand-desc"
+                      placeholder="1–2 Sätze über das Angebot/den Nutzen"
+                      value={state.meta.beschreibung}
+                      onChange={(e) => setState((p) => ({ ...p, meta: { ...p.meta, beschreibung: e.target.value } }))}
+                    />
                   </div>
-                  <p className="text-xs text-muted-foreground">Tipp: Beschreibe Nutzen statt Features – z. B. „hilft Teams, Projekte schneller zu liefern“.</p>
+
+                  <p className="text-xs text-muted-foreground">
+                    Tipp: Beschreibe Nutzen statt Features – z. B. „hilft Teams, Projekte schneller zu liefern“.
+                  </p>
                 </div>
               </Section>
             </motion.div>
           )}
 
+          {/* Schritt 2 */}
           {step === 2 && (
             <motion.div key="s2" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }}>
               <StepHeader step={2} total={total} title="Zielgruppe & Use-Cases" subtitle="Wen sprechen wir an? In welchen Kontexten?" />
-              <Section title="Zielgruppe" info="Segment & Merkmale (z. B. B2B KMU in DACH; 25–45; tech-affin)">
+              <Section
+                title="Zielgruppe"
+                info={
+                  <>
+                    Segment & Merkmale (z. B. B2B KMU in DACH; 25–45; tech-affin)
+                  </>
+                }
+              >
                 <div className="grid gap-3">
-                  <div className="flex gap-2">
-                    <Button variant={state.zielgruppe.b2 === "B2C" ? "default" : "outline"} onClick={()=>setState(p=>({...p, zielgruppe:{...p.zielgruppe, b2:"B2C"}}))}>B2C</Button>
-                    <Button variant={state.zielgruppe.b2 === "B2B" ? "default" : "outline"} onClick={()=>setState(p=>({...p, zielgruppe:{...p.zielgruppe, b2:"B2B"}}))}>B2B</Button>
+                  <div className="flex items-center gap-2">
+                    <Button
+                      variant={state.zielgruppe.b2 === "B2C" ? "default" : "outline"}
+                      onClick={() => setState((p) => ({ ...p, zielgruppe: { ...p.zielgruppe, b2: "B2C" } }))}
+                      title="B2C = Endkundenmarkt (Privatpersonen)"
+                    >
+                      B2C
+                    </Button>
+                    <Button
+                      variant={state.zielgruppe.b2 === "B2B" ? "default" : "outline"}
+                      onClick={() => setState((p) => ({ ...p, zielgruppe: { ...p.zielgruppe, b2: "B2B" } }))}
+                      title="B2B = Geschäftskunden (z. B. KMU = kleine & mittlere Unternehmen)"
+                    >
+                      B2B
+                    </Button>
+                    <Info
+                      size={16}
+                      className="ml-1 text-muted-foreground"
+                      aria-label="B2C/B2B Erklärung"
+                      title="B2C: Endkunden (Privatpersonen). B2B: Firmenkunden; KMU = kleine & mittlere Unternehmen."
+                    />
                   </div>
-                  <Textarea placeholder="Zielgruppenbeschreibung (z. B. Alter, Branche, Interessen)" value={state.zielgruppe.beschreibung} onChange={(e)=>setState(p=>({...p, zielgruppe:{...p.zielgruppe, beschreibung:e.target.value}}))} />
-                  <Textarea placeholder="Use-Cases (z. B. Website, App-Icon, Verpackung, Schild)" value={state.zielgruppe.usecases} onChange={(e)=>setState(p=>({...p, zielgruppe:{...p.zielgruppe, usecases:e.target.value}}))} />
+                  <p className="text-xs text-muted-foreground">
+                    B2C: Endkundenmarkt. B2B: Geschäftskunden. <strong>KMU</strong> = kleine & mittlere Unternehmen (bis ca. 250 MA).
+                  </p>
+                  <Textarea
+                    placeholder="Zielgruppenbeschreibung (z. B. Alter, Branche, Interessen)"
+                    value={state.zielgruppe.beschreibung}
+                    onChange={(e) => setState((p) => ({ ...p, zielgruppe: { ...p.zielgruppe, beschreibung: e.target.value } }))}
+                  />
+                  <Textarea
+                    placeholder="Use-Cases (z. B. Website, App-Icon, Verpackung, Schild)"
+                    value={state.zielgruppe.usecases}
+                    onChange={(e) => setState((p) => ({ ...p, zielgruppe: { ...p.zielgruppe, usecases: e.target.value } }))}
+                  />
                 </div>
               </Section>
 
               <Section title="Wettbewerb & USP" info="Nenne 1–3 Wettbewerber und den Unterschied deiner Marke">
                 <div className="grid gap-3">
-                  <Input placeholder="Wettbewerber 1 (optional)" value={state.wettbewerb.competitor1} onChange={(e)=>setState(p=>({...p, wettbewerb:{...p.wettbewerb, competitor1:e.target.value}}))} />
-                  <Input placeholder="Wettbewerber 2 (optional)" value={state.wettbewerb.competitor2} onChange={(e)=>setState(p=>({...p, wettbewerb:{...p.wettbewerb, competitor2:e.target.value}}))} />
-                  <Textarea placeholder="Positionierung/USP – was unterscheidet euch?" value={state.wettbewerb.differenzierung} onChange={(e)=>setState(p=>({...p, wettbewerb:{...p.wettbewerb, differenzierung:e.target.value}}))} />
+                  <Input
+                    placeholder="Wettbewerber 1 (optional)"
+                    value={state.wettbewerb.competitor1}
+                    onChange={(e) => setState((p) => ({ ...p, wettbewerb: { ...p.wettbewerb, competitor1: e.target.value } }))}
+                  />
+                  <Input
+                    placeholder="Wettbewerber 2 (optional)"
+                    value={state.wettbewerb.competitor2}
+                    onChange={(e) => setState((p) => ({ ...p, wettbewerb: { ...p.wettbewerb, competitor2: e.target.value } }))}
+                  />
+                  <Textarea
+                    placeholder="Positionierung/USP – was unterscheidet euch?"
+                    value={state.wettbewerb.differenzierung}
+                    onChange={(e) => setState((p) => ({ ...p, wettbewerb: { ...p.wettbewerb, differenzierung: e.target.value } }))}
+                  />
                 </div>
               </Section>
             </motion.div>
           )}
 
+          {/* Schritt 3 */}
           {step === 3 && (
             <motion.div key="s3" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }}>
               <StepHeader step={3} total={total} title="Markenwerte & Persönlichkeit" subtitle="Wofür steht die Marke?" />
               <Section title="Kernwerte" info="Wähle 2–5 Werte">
                 <ChipSelect
-                  options={["Vertrauen","Qualität","Innovation","Nachhaltigkeit","Premium","Zuverlässigkeit","Mut","Transparenz","Schnelligkeit","Kundenfokus","Tradition","Leidenschaft"]}
+                  name="werte"
+                  options={[
+                    "Vertrauen",
+                    "Qualität",
+                    "Innovation",
+                    "Nachhaltigkeit",
+                    "Premium",
+                    "Zuverlässigkeit",
+                    "Mut",
+                    "Transparenz",
+                    "Schnelligkeit",
+                    "Kundenfokus",
+                    "Tradition",
+                    "Leidenschaft",
+                  ]}
                   values={state.werte.values}
-                  onChange={(values)=>setState(p=>({...p, werte:{...p.werte, values}}))}
+                  onChange={(values) => setState((p) => ({ ...p, werte: { ...p.werte, values } }))}
                 />
               </Section>
               <Section title="Markenpersönlichkeit" info="Ton & Auftreten">
                 <ChipSelect
-                  options={["modern","freundlich","seriös","verspielt","elegant","mutig","technisch","warm","minimalistisch","luxuriös","bodenständig","kreativ"]}
+                  name="persoenlichkeit"
+                  options={[
+                    "modern",
+                    "freundlich",
+                    "seriös",
+                    "verspielt",
+                    "elegant",
+                    "mutig",
+                    "technisch",
+                    "warm",
+                    "minimalistisch",
+                    "luxuriös",
+                    "bodenständig",
+                    "kreativ",
+                  ]}
                   values={state.werte.persoenlichkeit}
-                  onChange={(persoenlichkeit)=>setState(p=>({...p, werte:{...p.werte, persoenlichkeit}}))}
+                  onChange={(persoenlichkeit) => setState((p) => ({ ...p, werte: { ...p.werte, persoenlichkeit } }))}
                 />
               </Section>
               <Section title="Zentrale Botschaft (optional)">
-                <Textarea placeholder="Welche Botschaft soll das Logo transportieren?" value={state.werte.botschaft} onChange={(e)=>setState(p=>({...p, werte:{...p.werte, botschaft:e.target.value}}))} />
+                <Textarea
+                  placeholder="Welche Botschaft soll das Logo transportieren?"
+                  value={state.werte.botschaft}
+                  onChange={(e) => setState((p) => ({ ...p, werte: { ...p.werte, botschaft: e.target.value } }))}
+                />
               </Section>
             </motion.div>
           )}
 
+          {/* Schritt 4 */}
           {step === 4 && (
             <motion.div key="s4" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }}>
               <StepHeader step={4} total={total} title="Brand Story (optional)" subtitle="Hintergrund & Motivation" />
               <Section title="Story aktivieren">
                 <div className="flex items-center gap-3">
-                  <input id="story-enabled" type="checkbox" checked={state.story.enabled} onChange={(e)=>setState(p=>({...p, story:{...p.story, enabled:e.target.checked}}))} />
-                  <label htmlFor="story-enabled" className="text-sm">Eigene Brand Story als Inspirationsquelle einbeziehen</label>
+                  <input
+                    id="story-enabled"
+                    type="checkbox"
+                    checked={state.story.enabled}
+                    onChange={(e) => setState((p) => ({ ...p, story: { ...p.story, enabled: e.target.checked } }))}
+                  />
+                  <label htmlFor="story-enabled" className="text-sm">
+                    Eigene Brand Story als Inspirationsquelle einbeziehen
+                  </label>
                 </div>
               </Section>
               {state.story.enabled && (
                 <Section title="Brand Story (Kurzform)">
-                  <Textarea rows={5} placeholder="Warum gibt es die Marke? Welche Vision? 2–5 Sätze." value={state.story.text} onChange={(e)=>setState(p=>({...p, story:{...p.story, text:e.target.value}}))} />
+                  <Textarea
+                    rows={5}
+                    placeholder="Warum gibt es die Marke? Welche Vision? 2–5 Sätze."
+                    value={state.story.text}
+                    onChange={(e) => setState((p) => ({ ...p, story: { ...p.story, text: e.target.value } }))}
+                  />
                 </Section>
               )}
             </motion.div>
           )}
 
+          {/* Schritt 5 */}
           {step === 5 && (
             <motion.div key="s5" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }}>
               <StepHeader step={5} total={total} title="Logo-Stil" subtitle="Logo-Typ & Stiladjektive" />
               <Section title="Logo-Typ">
                 <div className="flex flex-wrap gap-2">
-                  {["Wortmarke","Bildmarke","Wort-Bild-Marke","Emblem","Abstrakt"].map((t)=> (
-                    <Button key={t} variant={state.stil.logotyp===t?"default":"outline"} onClick={()=>setState(p=>({...p, stil:{...p.stil, logotyp:t}}))}>{t}</Button>
+                  {["Wortmarke", "Bildmarke", "Wort-Bild-Marke", "Emblem", "Abstrakt"].map((t) => (
+                    <Button key={t} variant={state.stil.logotyp === t ? "default" : "outline"} onClick={() => setState((p) => ({ ...p, stil: { ...p.stil, logotyp: t } }))}>
+                      {t}
+                    </Button>
                   ))}
                 </div>
               </Section>
               <Section title="Stiladjektive" info="Wähle 2–5 Adjektive">
                 <ChipSelect
-                  options={["minimalistisch","elegant","verspielt","futuristisch","vintage","technisch","organisch","geometrisch","freundlich","professionell","exklusiv","dynamisch"]}
+                  name="adjektive"
+                  options={[
+                    "minimalistisch",
+                    "elegant",
+                    "verspielt",
+                    "futuristisch",
+                    "vintage",
+                    "technisch",
+                    "organisch",
+                    "geometrisch",
+                    "freundlich",
+                    "professionell",
+                    "exklusiv",
+                    "dynamisch",
+                  ]}
                   values={state.stil.adjektive}
-                  onChange={(adjektive)=>setState(p=>({...p, stil:{...p.stil, adjektive}}))}
+                  onChange={(adjektive) => setState((p) => ({ ...p, stil: { ...p.stil, adjektive } }))}
                 />
               </Section>
               <Section title="Referenzen/Anmutung (optional)">
-                <Input placeholder="z. B. 'ähnlich simple Formen wie Apple Logo'" value={state.stil.referenzen} onChange={(e)=>setState(p=>({...p, stil:{...p.stil, referenzen:e.target.value}}))} />
+                <Input
+                  placeholder="z. B. ‚ähnlich simple Formen wie Apple Logo‘"
+                  value={state.stil.referenzen}
+                  onChange={(e) => setState((p) => ({ ...p, stil: { ...p.stil, referenzen: e.target.value } }))}
+                />
               </Section>
             </motion.div>
           )}
 
+          {/* Schritt 6 */}
           {step === 6 && (
             <motion.div key="s6" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }}>
               <StepHeader step={6} total={total} title="Farben" subtitle="Primär-/Sekundärfarbe & Verbote" />
               <Section title="Farbwahl" info="Logo muss auf Weiß funktionieren; SW-Tauglichkeit beachten">
                 <div className="grid gap-3">
-                  <div className="flex items-center gap-3 flex-wrap">
-                    <label className="text-sm w-36">Primärfarbe</label>
-                    <Input type="color" value={state.farben.primary} onChange={(e)=>setState(p=>({...p, farben:{...p.farben, primary:e.target.value}}))} className="h-10 w-16 p-1" />
-                    <Input placeholder="#HEX oder Name" value={state.farben.primary} onChange={(e)=>setState(p=>({...p, farben:{...p.farben, primary:e.target.value}}))} />
-                    {Number.isFinite(contrastPrimary) && (
-                      <Badge variant={contrastPrimary>=4.5?"default":"destructive"}>
-                        Kontrast zu Weiß: {contrastPrimary}:1 {contrastPrimary<4.5 && <span className="flex items-center gap-1 ml-1"><AlertTriangle size={14} aria-hidden="true"/>niedrig</span>}
-                      </Badge>
-                    )}
-                  </div>
-                  <div className="flex items-center gap-3 flex-wrap">
-                    <label className="text-sm w-36">Sekundärfarbe</label>
-                    <Input type="color" value={state.farben.secondary} onChange={(e)=>setState(p=>({...p, farben:{...p.farben, secondary:e.target.value}}))} className="h-10 w-16 p-1" />
-                    <Input placeholder="#HEX oder Name" value={state.farben.secondary} onChange={(e)=>setState(p=>({...p, farben:{...p.farben, secondary:e.target.value}}))} />
-                    {Number.isFinite(contrastSecondary) && (
-                      <Badge variant={contrastSecondary>=3?"secondary":"destructive"}>
-                        Kontrast zu Weiß: {contrastSecondary}:1
-                      </Badge>
-                    )}
-                  </div>
-                  <Input placeholder="Ausschlüsse (z. B. kein Pink, kein Neon)" value={state.farben.verbot} onChange={(e)=>setState(p=>({...p, farben:{...p.farben, verbot:e.target.value}}))} />
+                  <ColorRow
+                    label="Primärfarbe"
+                    value={state.farben.primary}
+                    onChange={(v) => setState((p) => ({ ...p, farben: { ...p.farben, primary: v } }))}
+                    contrast={contrastPrimary}
+                  />
+                  <ColorRow
+                    label="Sekundärfarbe"
+                    value={state.farben.secondary}
+                    onChange={(v) => setState((p) => ({ ...p, farben: { ...p.farben, secondary: v } }))}
+                    contrast={contrastSecondary}
+                  />
+                  <Input
+                    placeholder="Ausschlüsse (z. B. kein Pink, kein Neon)"
+                    value={state.farben.verbot}
+                    onChange={(e) => setState((p) => ({ ...p, farben: { ...p.farben, verbot: e.target.value } }))}
+                  />
                 </div>
-                <p className="text-xs text-muted-foreground mt-1">Hinweis: Für Fließtext gilt WCAG AA ≈ 4.5:1. Für Logos ist Lesbarkeit ebenfalls wichtig, auch wenn WCAG formell nicht greift.</p>
+                <p className="text-xs text-muted-foreground mt-1">
+                  Hinweis: Für Fließtext gilt WCAG AA ≈ 4.5:1. Für Logos ist Lesbarkeit ebenfalls wichtig, auch wenn WCAG formell nicht greift.
+                </p>
               </Section>
             </motion.div>
           )}
 
+          {/* Schritt 7 */}
           {step === 7 && (
             <motion.div key="s7" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }}>
               <StepHeader step={7} total={total} title="Typografie" subtitle="Schriftstil für Wortbestandteile" />
               <Section title="Schriftstil">
                 <div className="flex flex-wrap gap-2">
-                  {["serifenlos modern","Serif klassisch","mono/technisch","handgeschrieben","Display/markant","Retro"]
-                    .map((t)=> (
-                      <Button key={t} variant={state.typo.stil===t?"default":"outline"} onClick={()=>setState(p=>({...p, typo:{...p.typo, stil:t}}))}>{t}</Button>
+                  {[
+                    "serifenlos modern",
+                    "Serif klassisch",
+                    "Slab Serif",
+                    "mono/technisch",
+                    "Display/markant",
+                    "Retro",
+                    "Script/Schreibschrift",
+                    "Brush",
+                  ].map((t) => (
+                    <Button key={t} variant={state.typo.stil === t ? "default" : "outline"} onClick={() => setState((p) => ({ ...p, typo: { ...p.typo, stil: t } }))}>
+                      {t}
+                    </Button>
                   ))}
                 </div>
               </Section>
               <Section title="Details (optional)">
-                <Input placeholder="z. B. Großbuchstaben, weite Laufweite, runde Ecken" value={state.typo.details} onChange={(e)=>setState(p=>({...p, typo:{...p.typo, details:e.target.value}}))} />
+                <Input
+                  placeholder="z. B. Großbuchstaben, weite Laufweite, runde Ecken"
+                  value={state.typo.details}
+                  onChange={(e) => setState((p) => ({ ...p, typo: { ...p.typo, details: e.target.value } }))}
+                />
               </Section>
             </motion.div>
           )}
 
+          {/* Schritt 8 */}
           {step === 8 && (
             <motion.div key="s8" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }}>
               <StepHeader step={8} total={total} title="Zusammenfassung & Prompt" subtitle="Kopieren & weiterverwenden" />
-
-              <Section title="Logo-Vorschau-Hintergrund">
-                <div className="rounded-2xl border overflow-hidden">
-                  <div className="p-6 bg-white">
-                    <div className="h-24 border-2 border-dashed rounded-xl flex items-center justify-center">
-                      <span className="text-sm text-muted-foreground">Logo wird auf rein weißem Hintergrund dargestellt</span>
-                    </div>
-                  </div>
-                </div>
-              </Section>
-
+              {/* Logo-Vorschau entfernt – nur noch Prompt */}
               <Section title="Live-Prompt (kompakt)">
-                <Textarea rows={6} value={compactPrompt} readOnly className="font-mono"  spellCheck={false}/>
+                <Textarea rows={6} value={compactPrompt} readOnly className="font-mono" spellCheck={false} />
                 <p className="text-xs text-muted-foreground">Hinweis: Vollständige Version unten – diese Kurzansicht ist zum schnellen Prüfen gedacht.</p>
               </Section>
 
               <Section title="Vollständiger Prompt">
-                <Textarea rows={12} value={prompt} readOnly className="font-mono"  spellCheck={false}/>
+                <Textarea rows={12} value={prompt} readOnly className="font-mono" spellCheck={false} />
                 <div className="flex items-center gap-2 flex-wrap">
-                  <Button onClick={copyPrompt}><Copy className="h-4 w-4 mr-2"/>{copyMsg.includes("kopiert") ? "Kopiert!" : "In Zwischenablage kopieren"}</Button>
+                  <Button onClick={copyPrompt}>
+                    <Copy className="h-4 w-4 mr-2" />
+                    {copyMsg.includes("kopiert") ? "Kopiert!" : "In Zwischenablage kopieren"}
+                  </Button>
                   <Badge variant="secondary">Nur Textausgabe – manuell in KI einfügen</Badge>
                 </div>
-                {/* FIX 4: Feedback für Copy-Aktion */}
-                {copyMsg && <p className="text-xs text-muted-foreground mt-1" role="status" aria-live="polite">{copyMsg}</p>}
-              </Section>
-
-              <Section title="Nächste Schritte (Hinweis)">
-                <ul className="list-disc pl-5 text-sm text-muted-foreground space-y-1">
-                  <li>Prompt in Ihr bevorzugtes Bild-KI-Tool einfügen (z. B. ChatGPT Vision oder Gemini).</li>
-                  <li>Adjektive/Farben variieren und erneut generieren, bis das Ergebnis passt.</li>
-                  <li>Für App-Icon/kleine Größen: Detailgrad gering halten, starke Kontraste.</li>
-                </ul>
+                {copyMsg && (
+                  <p className="text-xs text-muted-foreground mt-1" role="status" aria-live="polite">
+                    {copyMsg}
+                  </p>
+                )}
               </Section>
             </motion.div>
           )}
@@ -604,13 +873,20 @@ const compactPrompt = useMemo(() => {
       {/* Bottom Nav / CTA */}
       <div className="fixed bottom-0 left-0 right-0 bg-background/95 backdrop-blur border-t px-4 py-3">
         <div className="max-w-xl mx-auto flex items-center justify-between gap-2">
-          <Button variant="outline" onClick={prev} disabled={step===1} className="px-5 py-6"><ChevronLeft className="h-5 w-5 mr-2"/>Zurück</Button>
+          <Button variant="outline" onClick={prev} disabled={step === 1} className="px-5 py-6">
+            <ChevronLeft className="h-5 w-5 mr-2" />
+            Zurück
+          </Button>
           <div className="flex-1 text-center text-xs text-muted-foreground">Automatisch gespeichert</div>
           {step < total ? (
-            <Button onClick={next} disabled={!canContinue} className="px-6 py-6">Weiter<ChevronRight className="h-5 w-5 ml-2"/></Button>
+            <Button onClick={next} disabled={!canContinue} className="px-6 py-6">
+              Weiter
+              <ChevronRight className="h-5 w-5 ml-2" />
+            </Button>
           ) : (
             <Button onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })} className="px-6 py-6">
-              <Check className="h-5 w-5 mr-2" />Fertig
+              <Check className="h-5 w-5 mr-2" />
+              Fertig
             </Button>
           )}
         </div>
@@ -618,3 +894,47 @@ const compactPrompt = useMemo(() => {
     </div>
   );
 }
+
+/* ------------ Templates (unverändert) ------------ */
+
+const TEMPLATES = [
+  {
+    name: "Tech Startup",
+    apply: (set) =>
+      set((p) => ({
+        ...p,
+        meta: { ...p.meta, branche: "Software/Tech", beschreibung: "Cloud-basierte Produktivitäts-App" },
+        zielgruppe: { ...p.zielgruppe, b2: "B2B", beschreibung: "KMU, 20–200 MA, digital-affin", usecases: "Website, App-Icon, Pitch-Deck" },
+        werte: { ...p.werte, values: ["Innovation", "Qualität", "Transparenz"], persoenlichkeit: ["modern", "technisch", "freundlich"] },
+        stil: { ...p.stil, logotyp: "Wort-Bild-Marke", adjektive: ["minimalistisch", "geometrisch", "professionell"], referenzen: "schlichte geometrische Formen" },
+        farben: { ...p.farben, primary: "#0EA5E9", secondary: "#111827", verbot: "kein Neon" },
+        typo: { ...p.typo, stil: "serifenlos modern", details: "Großbuchstaben, weite Laufweite" },
+      })),
+  },
+  {
+    name: "Bio/Food",
+    apply: (set) =>
+      set((p) => ({
+        ...p,
+        meta: { ...p.meta, branche: "Bio-Lebensmittel", beschreibung: "Regionale, nachhaltige Produkte" },
+        zielgruppe: { ...p.zielgruppe, b2: "B2C", beschreibung: "Familien & gesundheitsbewusste Käufer", usecases: "Verpackung, Ladenbeschriftung, Social" },
+        werte: { ...p.werte, values: ["Nachhaltigkeit", "Qualität", "Gemeinschaft"], persoenlichkeit: ["warm", "organisch", "bodenständig"] },
+        stil: { ...p.stil, logotyp: "Emblem", adjektive: ["organisch", "freundlich", "vintage"], referenzen: "natürliche Formen" },
+        farben: { ...p.farben, primary: "#2F855A", secondary: "#A3B18A", verbot: "keine Neonfarben" },
+        typo: { ...p.typo, stil: "Serif klassisch", details: "runde Ecken" },
+      })),
+  },
+  {
+    name: "Finance/Legal",
+    apply: (set) =>
+      set((p) => ({
+        ...p,
+        meta: { ...p.meta, branche: "Finanzen/Jura", beschreibung: "Beratung & Vermögensverwaltung" },
+        zielgruppe: { ...p.zielgruppe, b2: "B2B", beschreibung: "C-Level, Investoren", usecases: "Website, Briefkopf, Präsentationen" },
+        werte: { ...p.werte, values: ["Vertrauen", "Stabilität", "Diskretion"], persoenlichkeit: ["seriös", "elegant", "minimalistisch"] },
+        stil: { ...p.stil, logotyp: "Wortmarke", adjektive: ["elegant", "geometrisch", "zeitlos"], referenzen: "dezente Monogramm-Anmutung" },
+        farben: { ...p.farben, primary: "#0B2447", secondary: "#576CBC", verbot: "keine grellen Farben" },
+        typo: { ...p.typo, stil: "Serif klassisch", details: "feine Strichstärken, enge Laufweite" },
+      })),
+  },
+];
