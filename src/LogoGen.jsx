@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState, useRef, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Check, ChevronLeft, ChevronRight, Copy, Trash2, RotateCcw, Info, Download, Upload, AlertTriangle, Sparkles } from "lucide-react";
+import { Check, ChevronLeft, ChevronRight, Copy, Trash2, RotateCcw, Info, Download, Upload, AlertTriangle, Sparkles, MoreVertical, X } from "lucide-react";
 import { Button, Card, CardContent, CardHeader, CardTitle, Input, Textarea, Badge } from "./ui";
 
 /* ------------ kleine Helfer ------------ */
@@ -139,11 +139,12 @@ function usePersistentState() {
 
 /* ------------ UI-Bausteine ------------ */
 
-// FIX 4: Neue Style-Konstanten basierend auf Mosaik-Design
-const MOSAIK_PRIMARY = "#6F00FF"; // Aus dem SVG-Gradient/Fill
-const MOSAIK_SECONDARY = "#FF1EFF"; // Aus dem SVG-Gradient
-const MOSAIK_BACKGROUND = "#141414"; // Dunkler Hintergrund
-const MOSAIK_CARD_BG = "#222222"; // Dunkle, abgesetzte Karten
+// Style-Konstanten
+const MOSAIK_PRIMARY = "#6F00FF"; 
+const MOSAIK_BACKGROUND = "#141414"; 
+// Neu: Leicht dunklerer Card-Hintergrund für mehr Tiefe
+const MOSAIK_CARD_BG_DARKER = "#1C1C1C"; 
+const MOSAIK_BORDER_COLOR = "rgba(111, 0, 255, 0.3)"; // Subtiler lila-Rand
 
 const StepHeader = ({ step, total, title, subtitle }) => (
   <div className="mb-5">
@@ -157,7 +158,6 @@ const StepHeader = ({ step, total, title, subtitle }) => (
       </div>
     </div>
     <div className="w-full h-2 bg-gray-700 rounded-full mt-4 overflow-hidden">
-      {/* FIX 4: Progressbar mit Mosaik-Farbe */}
       <motion.div
         className="h-2"
         style={{ backgroundColor: MOSAIK_PRIMARY }}
@@ -170,9 +170,9 @@ const StepHeader = ({ step, total, title, subtitle }) => (
 );
 
 const Section = ({ title, children, info, danger }) => (
-  // FIX 4: Dunkle Card mit Mosaik-BG
-  <Card className={`mb-5 rounded-2xl shadow-lg border-gray-700 ${MOSAIK_CARD_BG} ${danger ? "border-red-600" : ""}`} style={{backgroundColor: MOSAIK_CARD_BG}}>
-    <CardHeader className="py-4">
+  // FIX 1: Premium Card Style - dunklerer Hintergrund, subtiler Rand, mehr Schatten
+  <Card className={`mb-5 rounded-xl shadow-2xl border-2 ${danger ? "border-red-600" : ""}`} style={{backgroundColor: MOSAIK_CARD_BG_DARKER, borderColor: MOSAIK_BORDER_COLOR}}>
+    <CardHeader className="py-4 px-5">
       <CardTitle className="text-base font-medium flex items-center gap-2 text-white">
         {title}
         {info && (
@@ -183,13 +183,12 @@ const Section = ({ title, children, info, danger }) => (
         )}
       </CardTitle>
     </CardHeader>
-    <CardContent className="space-y-3 pb-5">{children}</CardContent>
+    <CardContent className="space-y-3 pb-5 px-5">{children}</CardContent>
   </Card>
 );
 
 const Stepper = ({ step, setStep, labels, onKeyDown }) => (
-  // FIX 4: Dunkler Stepper-Hintergrund
-  <div className="sticky top-0 z-20 bg-gray-900/80 backdrop-blur border-b border-gray-700">
+  <div className="sticky top-0 z-20 bg-gray-900/80 backdrop-blur border-b border-gray-800">
     <div className="max-w-xl mx-auto px-4 py-2 overflow-x-auto">
       <div className="flex gap-2 w-max" role="tablist" tabIndex={0} onKeyDown={onKeyDown}>
         {labels.map((label, idx) => {
@@ -203,9 +202,8 @@ const Stepper = ({ step, setStep, labels, onKeyDown }) => (
               aria-controls={`panel-${s}`}
               id={`tab-${s}`}
               onClick={() => setStep(s)}
-              // FIX 4: Mosaik-Farbakzent für den aktiven Schritt
               className={`px-3 py-1.5 rounded-full text-sm border whitespace-nowrap transition-colors ${
-                active ? "border-transparent text-white" : "bg-gray-700/40 hover:bg-gray-700 text-gray-300"
+                active ? "border-transparent text-white" : "bg-gray-700/40 hover:bg-gray-700 text-gray-300 border-gray-700"
               }`}
               style={active ? { backgroundColor: MOSAIK_PRIMARY, borderColor: MOSAIK_PRIMARY } : {}}
             >
@@ -240,7 +238,7 @@ const ChipSelect = ({ options, values, onChange, name = "chip" }) => {
             key={o}
             htmlFor={id}
             className={`px-3 py-2 rounded-2xl border text-sm cursor-pointer select-none transition-colors ${
-              checked ? "text-white border-transparent" : "bg-gray-700/40 hover:bg-gray-700 text-gray-300 border-gray-700"
+              checked ? "text-white border-transparent" : "bg-gray-800 hover:bg-gray-700 text-gray-300 border-gray-700"
             }`}
             style={checked ? { backgroundColor: MOSAIK_PRIMARY } : {}}
           >
@@ -261,17 +259,17 @@ const ColorRow = ({ label, value, onChange, contrast }) => {
   return (
     <div className="flex items-center gap-3 flex-wrap">
       <label className="text-sm w-36 text-gray-300">{label}</label>
-      {/* FIX 1: Entfernt class="p-1" vom <Input type="color"> – das ist oft der Grund, warum der native Farbwähler auf mobilen Browsern nicht richtig funktioniert. Die Dimensionierung ist jetzt über die Klassen h-10 w-16 gewährleistet. */}
-      {/* FIX 1: Hinzugefügt: 'touch-manipulation' als experimenteller Fix für Android/Samsung-Browser, wenn das Farbfeld nicht korrekt reagiert. */}
+      {/* FIX 4: Farbwähler-Logik korrigiert, um den Wert des Farbfelds zu übernehmen */}
       <Input
         type="color"
         value={normalized || "#FFFFFF"}
+        // WICHTIGER FIX: Bei Änderung im Farbfeld direkt den neuen Wert an den State übergeben.
         onChange={(e) => onChange(e.target.value)}
-        className="h-10 w-16 touch-manipulation" // p-1 entfernt, touch-manipulation hinzugefügt
+        className="h-10 w-16 touch-manipulation" 
         aria-label={`${label} (Farbfeld)`}
         title="Farbfeld – klick zum Wählen"
       />
-      {/* FIX 4: Dunkle Eingabefelder */}
+      {/* FIX 1: Dunkle Eingabefelder */}
       <Input
         placeholder="#HEX oder Farbnamen (z. B. royalblue)"
         value={value}
@@ -290,7 +288,6 @@ const ColorRow = ({ label, value, onChange, contrast }) => {
         aria-label={`Farbvorschau ${swatch}`}
       />
       {Number.isFinite(contrast) && (
-        // FIX 4: Badge-Style an dunklen Hintergrund angepasst
         <Badge
           variant="default"
           className={`text-xs ${
@@ -383,9 +380,9 @@ export default function App() {
   const { state, setState, reset, clearStorage } = usePersistentState();
   const [step, setStep] = useState(1);
   const [copyMsg, setCopyMsg] = useState("");
+  const [showMenu, setShowMenu] = useState(false); // FIX 3
   const fileInputRef = useRef(null);
 
-  // FIX 3: Angepasste Labels und Reduzierung auf 7 Schritte (Logo-Vorschau entfernt)
   const labels = ["Basis", "Zielgruppe & Wettbewerb", "Werte", "Story", "Stil", "Farben", "Typo/Prompt"];
   const total = labels.length;
 
@@ -407,15 +404,45 @@ export default function App() {
   const prev = () => setStep((s) => Math.max(1, s - 1));
 
   const handleReset = useCallback(() => {
+    setShowMenu(false); // Menü schließen
     if (confirm("Entwurf wirklich auf Standard zurücksetzen?")) reset();
   }, [reset]);
 
   const handleClear = useCallback(() => {
+    setShowMenu(false); // Menü schließen
     const c = prompt("ALLE lokalen Daten löschen? Tippe LÖSCHEN zur Bestätigung.");
     if ((c || "").trim().toUpperCase() === "LÖSCHEN") {
       clearStorage();
     }
   }, [clearStorage]);
+
+  const handleImportClick = () => {
+    setShowMenu(false); // Menü schließen
+    fileInputRef.current?.click();
+  };
+
+  const handleExport = () => {
+    setShowMenu(false); // Menü schließen
+    const blob = new Blob([JSON.stringify(state, null, 2)], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `aaa-logo-entwurf-${Date.now()}.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  const importJSON = (file) => {
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      try {
+        const data = JSON.parse(e.target.result);
+        setState(data);
+        if (fileInputRef.current) fileInputRef.current.value = "";
+      } catch {}
+    };
+    reader.readAsText(file);
+  };
 
   const prompt = useMemo(() => buildPrompt(state), [state]);
   const compactPrompt = useMemo(() => {
@@ -443,68 +470,62 @@ export default function App() {
     return true;
   }, [step, state]);
 
-  // Import/Export
-  const exportJSON = () => {
-    const blob = new Blob([JSON.stringify(state, null, 2)], { type: "application/json" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `aaa-logo-entwurf-${Date.now()}.json`;
-    a.click();
-    URL.revokeObjectURL(url);
-  };
-  const importJSON = (file) => {
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      try {
-        const data = JSON.parse(e.target.result);
-        setState(data);
-        if (fileInputRef.current) fileInputRef.current.value = "";
-      } catch {}
-    };
-    reader.readAsText(file);
-  };
-
   // Kontrast mit normalisierten Farben
   const contrastPrimary = useMemo(() => contrastWithWhite(state.farben.primary), [state.farben.primary]);
   const contrastSecondary = useMemo(() => contrastWithWhite(state.farben.secondary), [state.farben.secondary]);
 
   return (
-    // FIX 4: Mosaik-Style (Dunkler Hintergrund, Textfarbe)
     <div className="min-h-screen text-white" style={{ backgroundColor: MOSAIK_BACKGROUND }}>
       {/* Topbar */}
-      <header className="sticky top-0 z-20 bg-gray-900/90 backdrop-blur border-b border-gray-700">
+      <header className="sticky top-0 z-20 bg-gray-900/90 backdrop-blur border-b border-gray-800">
         <div className="py-3 px-4 flex items-center justify-between gap-2">
-          {/* Nur Icon (kein Logotext) */}
+          {/* Nur Icon */}
           <div className="flex items-center gap-2">
-            {/* FIX 4: Sparkles in Mosaik-Farbe */}
             <Sparkles className="h-5 w-5" aria-hidden="true" style={{ color: MOSAIK_PRIMARY }} />
           </div>
-          <div className="flex gap-2">
-            <Button variant="outline" size="sm" onClick={exportJSON} className="border-gray-700 hover:bg-gray-700 text-gray-300 bg-gray-800">
-              <Download className="h-4 w-4 mr-1" />
-              Export
+          {/* FIX 3: Menü-Button und Dropdown */}
+          <div className="relative">
+            <Button variant="outline" size="icon" onClick={() => setShowMenu(p => !p)} className="bg-gray-800 hover:bg-gray-700 border-gray-700">
+              <MoreVertical className="h-5 w-5" />
             </Button>
-            <input
-              ref={fileInputRef}
-              type="file"
-              accept="application/json"
-              className="hidden"
-              onChange={(e) => importJSON(e.target.files?.[0])}
-            />
-            <Button variant="outline" size="sm" onClick={() => fileInputRef.current?.click()} className="border-gray-700 hover:bg-gray-700 text-gray-300 bg-gray-800">
-              <Upload className="h-4 w-4 mr-1" />
-              Import
-            </Button>
-            <Button variant="destructive" size="icon" onClick={handleReset} title="Zurücksetzen" className="bg-red-700 hover:bg-red-800 border-red-700">
-              <RotateCcw className="h-5 w-5" />
-            </Button>
-            <Button variant="destructive" size="icon" onClick={handleClear} title="Entwurf löschen" className="bg-red-700 hover:bg-red-800 border-red-700">
-              <Trash2 className="h-5 w-5" />
-            </Button>
+            {showMenu && (
+              <motion.div 
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: 10, transition: { duration: 0.15 } }}
+                transition={{ type: "tween", duration: 0.2 }}
+                className="absolute right-0 mt-2 w-48 rounded-lg shadow-xl bg-gray-800 border border-gray-700 z-30 overflow-hidden"
+              >
+                <div className="p-2 space-y-1">
+                  <Button variant="ghost" size="sm" onClick={handleExport} className="w-full justify-start text-gray-300 hover:bg-gray-700">
+                    <Download className="h-4 w-4 mr-2" />
+                    Export (JSON)
+                  </Button>
+                  <Button variant="ghost" size="sm" onClick={handleImportClick} className="w-full justify-start text-gray-300 hover:bg-gray-700">
+                    <Upload className="h-4 w-4 mr-2" />
+                    Import (JSON)
+                  </Button>
+                  <div className="h-px bg-gray-700 my-1"></div>
+                  <Button variant="ghost" size="sm" onClick={handleReset} className="w-full justify-start text-red-400 hover:bg-red-900/50">
+                    <RotateCcw className="h-4 w-4 mr-2" />
+                    Zurücksetzen
+                  </Button>
+                  <Button variant="ghost" size="sm" onClick={handleClear} className="w-full justify-start text-red-400 hover:bg-red-900/50">
+                    <Trash2 className="h-4 w-4 mr-2" />
+                    Lokal Löschen
+                  </Button>
+                </div>
+              </motion.div>
+            )}
           </div>
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="application/json"
+            className="hidden"
+            onChange={(e) => importJSON(e.target.files?.[0])}
+          />
         </div>
-        {/* FIX 3: Labels in Stepper korrigiert */}
         <Stepper step={step} setStep={setStep} labels={labels} onKeyDown={onKeyDown} />
       </header>
 
@@ -515,16 +536,8 @@ export default function App() {
             <motion.div key="s1" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }}>
               <StepHeader step={1} total={total} title="Markenbasis" subtitle="Name, Slogan, Branche, Kurzbeschreibung" />
 
-              <Section title="Schnellstart-Templates" info="Spart Zeit – später alles anpassbar">
-                <div className="flex gap-2 flex-wrap">
-                  {TEMPLATES.map((t) => (
-                    <Button key={t.name} variant="secondary" size="sm" onClick={() => t.apply(setState)} className="bg-gray-700 text-gray-300 hover:bg-gray-600 border-gray-700">
-                      {t.name}
-                    </Button>
-                  ))}
-                </div>
-              </Section>
-
+              {/* FIX 2: Schnellstart-Templates entfernt */}
+              
               <Section title="Grunddaten" info="Pflichtfelder sind mit * gekennzeichnet">
                 <div className="grid gap-3">
                   <div>
@@ -537,7 +550,6 @@ export default function App() {
                       value={state.meta.name}
                       onChange={(e) => setState((p) => ({ ...p, meta: { ...p.meta, name: e.target.value } }))}
                       aria-describedby={!state.meta.name || state.meta.name.trim().length < 2 ? "brand-name-err" : undefined}
-                      // FIX 4: Dunkle Eingabefelder
                       className="bg-gray-900 border-gray-700 text-white placeholder:text-gray-500"
                     />
                     {(!state.meta.name || state.meta.name.trim().length < 2) && (
@@ -567,7 +579,6 @@ export default function App() {
                     </label>
                     <select
                       id="brand-branche"
-                      // FIX 4: Dunkles Dropdown
                       className="w-full rounded-md border px-3 py-2 text-sm bg-gray-900 border-gray-700 text-white"
                       value={state.meta.branche}
                       onChange={(e) => setState((p) => ({ ...p, meta: { ...p.meta, branche: e.target.value } }))}
@@ -849,7 +860,6 @@ export default function App() {
               <StepHeader step={6} total={total} title="Farben" subtitle="Primär-/Sekundärfarbe & Verbote" />
               <Section title="Farbwahl" info="Logo muss auf Weiß funktionieren; SW-Tauglichkeit beachten">
                 <div className="grid gap-3">
-                  {/* FIX 1: p-1 Klasse im ColorRow Input entfernt, um Mobile-Funktion zu gewährleisten */}
                   <ColorRow
                     label="Primärfarbe"
                     value={state.farben.primary}
@@ -876,7 +886,7 @@ export default function App() {
             </motion.div>
           )}
 
-          {/* Schritt 7 (Typografie) */}
+          {/* Schritt 7 (Typografie/Prompt) */}
           {step === 7 && (
             <motion.div key="s7" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }}>
               <StepHeader step={7} total={total} title="Typografie" subtitle="Schriftstil für Wortbestandteile" />
