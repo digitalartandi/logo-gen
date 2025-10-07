@@ -171,7 +171,7 @@ const StepHeader = ({ step, total, title, subtitle }) => (
 
 const Section = ({ title, children, info, danger }) => (
   // FIX 4: Dunkle Card mit Mosaik-BG
-  <Card className={`mb-5 rounded-2xl shadow-lg border-gray-700 bg-gray-800 ${danger ? "border-red-600" : ""}`}>
+  <Card className={`mb-5 rounded-2xl shadow-lg border-gray-700 ${MOSAIK_CARD_BG} ${danger ? "border-red-600" : ""}`} style={{backgroundColor: MOSAIK_CARD_BG}}>
     <CardHeader className="py-4">
       <CardTitle className="text-base font-medium flex items-center gap-2 text-white">
         {title}
@@ -236,7 +236,6 @@ const ChipSelect = ({ options, values, onChange, name = "chip" }) => {
         const checked = selected.has(o);
         const id = `${name}-${o}`;
         return (
-          // FIX 2: onClick/onChange Handler ist korrekt, das Problem lag vermutlich an der falschen 'sr-only' Platzierung oder der fehlenden `onChange` im Code der Vorgängerversion. Hier ist die Logik auf den Button umgestellt, um die Klickbarkeit zu verbessern.
           <label
             key={o}
             htmlFor={id}
@@ -245,7 +244,6 @@ const ChipSelect = ({ options, values, onChange, name = "chip" }) => {
             }`}
             style={checked ? { backgroundColor: MOSAIK_PRIMARY } : {}}
           >
-            {/* FIX 2: onChange direkt auf das unsichtbare Input, um den state zu aktualisieren. */}
             <input id={id} type="checkbox" checked={checked} onChange={() => toggle(o)} className="sr-only" />
             {o}
           </label>
@@ -264,11 +262,12 @@ const ColorRow = ({ label, value, onChange, contrast }) => {
     <div className="flex items-center gap-3 flex-wrap">
       <label className="text-sm w-36 text-gray-300">{label}</label>
       {/* FIX 1: Entfernt class="p-1" vom <Input type="color"> – das ist oft der Grund, warum der native Farbwähler auf mobilen Browsern nicht richtig funktioniert. Die Dimensionierung ist jetzt über die Klassen h-10 w-16 gewährleistet. */}
+      {/* FIX 1: Hinzugefügt: 'touch-manipulation' als experimenteller Fix für Android/Samsung-Browser, wenn das Farbfeld nicht korrekt reagiert. */}
       <Input
         type="color"
         value={normalized || "#FFFFFF"}
         onChange={(e) => onChange(e.target.value)}
-        className="h-10 w-16" // p-1 entfernt
+        className="h-10 w-16 touch-manipulation" // p-1 entfernt, touch-manipulation hinzugefügt
         aria-label={`${label} (Farbfeld)`}
         title="Farbfeld – klick zum Wählen"
       />
@@ -333,7 +332,7 @@ function buildPrompt(s) {
     parts.push(`Zielgruppe: ${audience}${usecases}.`);
   }
 
-  // Wettbewerb existiert, muss aber nicht verschoben werden, da er Schritt 2 ist.
+  // Wettbewerb ist jetzt Teil von Schritt 2
   if (s.wettbewerb.competitor1 || s.wettbewerb.competitor2 || s.wettbewerb.differenzierung) {
     const comps = [s.wettbewerb.competitor1, s.wettbewerb.competitor2].filter(Boolean).join(", ");
     if (comps) parts.push(`Wettbewerbsumfeld: ${comps}.`);
@@ -357,6 +356,7 @@ function buildPrompt(s) {
   }
 
   const farbBits = [];
+  // Korrekte Verwendung von toHex6 für die Ausgabe
   if (s.farben.primary) farbBits.push(`Primärfarbe ${toHex6(s.farben.primary) || s.farben.primary}`);
   if (s.farben.secondary) farbBits.push(`Sekundärfarbe ${toHex6(s.farben.secondary) || s.farben.secondary}`);
   if (s.farben.verbot) farbBits.push(`Keine: ${s.farben.verbot}`);
@@ -385,7 +385,7 @@ export default function App() {
   const [copyMsg, setCopyMsg] = useState("");
   const fileInputRef = useRef(null);
 
-  // FIX 3: Angepasste Labels: 'Wettbewerb' von 3 auf 2 verschoben, Kategorienummerierung korrigiert.
+  // FIX 3: Angepasste Labels und Reduzierung auf 7 Schritte (Logo-Vorschau entfernt)
   const labels = ["Basis", "Zielgruppe & Wettbewerb", "Werte", "Story", "Stil", "Farben", "Typo/Prompt"];
   const total = labels.length;
 
@@ -567,6 +567,7 @@ export default function App() {
                     </label>
                     <select
                       id="brand-branche"
+                      // FIX 4: Dunkles Dropdown
                       className="w-full rounded-md border px-3 py-2 text-sm bg-gray-900 border-gray-700 text-white"
                       value={state.meta.branche}
                       onChange={(e) => setState((p) => ({ ...p, meta: { ...p.meta, branche: e.target.value } }))}
@@ -637,7 +638,7 @@ export default function App() {
                       variant={state.zielgruppe.b2 === "B2C" ? "default" : "outline"}
                       onClick={() => setState((p) => ({ ...p, zielgruppe: { ...p.zielgruppe, b2: "B2C" } }))}
                       title="B2C = Endkundenmarkt (Privatpersonen)"
-                      className={state.zielgruppe.b2 === "B2C" ? "bg-purple-700 text-white" : "bg-gray-700 text-gray-300 hover:bg-gray-600 border-gray-700"}
+                      className={state.zielgruppe.b2 === "B2C" ? "text-white" : "bg-gray-700 text-gray-300 hover:bg-gray-600 border-gray-700"}
                       style={state.zielgruppe.b2 === "B2C" ? { backgroundColor: MOSAIK_PRIMARY } : {}}
                     >
                       B2C
@@ -646,7 +647,7 @@ export default function App() {
                       variant={state.zielgruppe.b2 === "B2B" ? "default" : "outline"}
                       onClick={() => setState((p) => ({ ...p, zielgruppe: { ...p.zielgruppe, b2: "B2B" } }))}
                       title="B2B = Geschäftskunden (z. B. KMU = kleine & mittlere Unternehmen)"
-                      className={state.zielgruppe.b2 === "B2B" ? "bg-purple-700 text-white" : "bg-gray-700 text-gray-300 hover:bg-gray-600 border-gray-700"}
+                      className={state.zielgruppe.b2 === "B2B" ? "text-white" : "bg-gray-700 text-gray-300 hover:bg-gray-600 border-gray-700"}
                       style={state.zielgruppe.b2 === "B2B" ? { backgroundColor: MOSAIK_PRIMARY } : {}}
                     >
                       B2B
@@ -704,7 +705,6 @@ export default function App() {
           {/* Schritt 3 (Werte) */}
           {step === 3 && (
             <motion.div key="s3" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }}>
-              {/* FIX 3: Schritt-Nummer korrigiert */}
               <StepHeader step={3} total={total} title="Markenwerte & Persönlichkeit" subtitle="Wofür steht die Marke?" />
               <Section title="Kernwerte" info="Wähle 2–5 Werte">
                 <ChipSelect
@@ -723,7 +723,6 @@ export default function App() {
                     "Tradition",
                     "Leidenschaft",
                   ]}
-                  // FIX 2: Callback auf dem `ChipSelect` war korrekt, keine Änderung nötig, da der Fix in der `ChipSelect` Komponente liegt.
                   values={state.werte.values}
                   onChange={(values) => setState((p) => ({ ...p, werte: { ...p.werte, values } }))}
                 />
@@ -763,7 +762,6 @@ export default function App() {
           {/* Schritt 4 (Story) */}
           {step === 4 && (
             <motion.div key="s4" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }}>
-              {/* FIX 3: Schritt-Nummer korrigiert */}
               <StepHeader step={4} total={total} title="Brand Story (optional)" subtitle="Hintergrund & Motivation" />
               <Section title="Story aktivieren">
                 <div className="flex items-center gap-3 text-gray-300">
@@ -772,7 +770,7 @@ export default function App() {
                     type="checkbox"
                     checked={state.story.enabled}
                     onChange={(e) => setState((p) => ({ ...p, story: { ...p.story, enabled: e.target.checked } }))}
-                    className="form-checkbox h-4 w-4 text-purple-600 bg-gray-700 border-gray-600 rounded" // FIX 4: Checkbox-Farbe angepasst
+                    className="form-checkbox h-4 w-4 text-purple-600 bg-gray-700 border-gray-600 rounded" 
                     style={{ color: MOSAIK_PRIMARY }}
                   />
                   <label htmlFor="story-enabled" className="text-sm">
@@ -797,7 +795,6 @@ export default function App() {
           {/* Schritt 5 (Stil) */}
           {step === 5 && (
             <motion.div key="s5" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }}>
-              {/* FIX 3: Schritt-Nummer korrigiert */}
               <StepHeader step={5} total={total} title="Logo-Stil" subtitle="Logo-Typ & Stiladjektive" />
               <Section title="Logo-Typ">
                 <div className="flex flex-wrap gap-2">
@@ -806,7 +803,6 @@ export default function App() {
                       key={t}
                       variant={state.stil.logotyp === t ? "default" : "outline"}
                       onClick={() => setState((p) => ({ ...p, stil: { ...p.stil, logotyp: t } }))}
-                      // FIX 4: Button-Style mit Mosaik-Farbe
                       className={state.stil.logotyp === t ? "text-white" : "bg-gray-700 text-gray-300 hover:bg-gray-600 border-gray-700"}
                       style={state.stil.logotyp === t ? { backgroundColor: MOSAIK_PRIMARY } : {}}
                     >
@@ -832,7 +828,6 @@ export default function App() {
                     "exklusiv",
                     "dynamisch",
                   ]}
-                  // FIX 2: Callback ist korrekt
                   values={state.stil.adjektive}
                   onChange={(adjektive) => setState((p) => ({ ...p, stil: { ...p.stil, adjektive } }))}
                 />
@@ -851,7 +846,6 @@ export default function App() {
           {/* Schritt 6 (Farben) */}
           {step === 6 && (
             <motion.div key="s6" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }}>
-              {/* FIX 3: Schritt-Nummer korrigiert */}
               <StepHeader step={6} total={total} title="Farben" subtitle="Primär-/Sekundärfarbe & Verbote" />
               <Section title="Farbwahl" info="Logo muss auf Weiß funktionieren; SW-Tauglichkeit beachten">
                 <div className="grid gap-3">
@@ -885,7 +879,6 @@ export default function App() {
           {/* Schritt 7 (Typografie) */}
           {step === 7 && (
             <motion.div key="s7" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }}>
-              {/* FIX 3: Schritt-Nummer korrigiert */}
               <StepHeader step={7} total={total} title="Typografie" subtitle="Schriftstil für Wortbestandteile" />
               <Section title="Schriftstil">
                 <div className="flex flex-wrap gap-2">
@@ -903,7 +896,6 @@ export default function App() {
                       key={t}
                       variant={state.typo.stil === t ? "default" : "outline"}
                       onClick={() => setState((p) => ({ ...p, typo: { ...p.typo, stil: t } }))}
-                      // FIX 4: Button-Style mit Mosaik-Farbe
                       className={state.typo.stil === t ? "text-white" : "bg-gray-700 text-gray-300 hover:bg-gray-600 border-gray-700"}
                       style={state.typo.stil === t ? { backgroundColor: MOSAIK_PRIMARY } : {}}
                     >
@@ -920,17 +912,11 @@ export default function App() {
                   className="bg-gray-900 border-gray-700 text-white placeholder:text-gray-500"
                 />
               </Section>
-            </motion.div>
-          )}
 
-          {/* Schritt 8 (Prompt) */}
-          {step === 8 && (
-            <motion.div key="s8" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }}>
-              {/* FIX 3: Schritt-Nummer korrigiert */}
+              {/* Hinzugefügter Prompt-Schritt am Ende */}
               <StepHeader step={total} total={total} title="Zusammenfassung & Prompt" subtitle="Kopieren & weiterverwenden" />
               
               <Section title="Live-Prompt (kompakt)">
-                {/* FIX 4: Dunkle Textarea */}
                 <Textarea rows={6} value={compactPrompt} readOnly className="font-mono bg-gray-900 border-gray-700 text-white" spellCheck={false} />
                 <p className="text-xs text-gray-500">Hinweis: Vollständige Version unten – diese Kurzansicht ist zum schnellen Prüfen gedacht.</p>
               </Section>
@@ -938,7 +924,6 @@ export default function App() {
               <Section title="Vollständiger Prompt">
                 <Textarea rows={12} value={prompt} readOnly className="font-mono bg-gray-900 border-gray-700 text-white" spellCheck={false} />
                 <div className="flex items-center gap-2 flex-wrap">
-                  {/* FIX 4: Button-Style mit Mosaik-Farbe */}
                   <Button onClick={copyPrompt} className="text-white" style={{ backgroundColor: MOSAIK_PRIMARY }}>
                     <Copy className="h-4 w-4 mr-2" />
                     {copyMsg.includes("kopiert") ? "Kopiert!" : "In Zwischenablage kopieren"}
