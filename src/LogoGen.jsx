@@ -284,14 +284,17 @@ const ColorRow = ({ label, value, onChange, contrast }) => {
 
   return (
     <div className="flex items-center gap-3 flex-wrap">
-      {/* FIX 1: Emojis entfernt */}
       <label className="text-sm w-36 text-gray-300">{label}</label>
       <Input
         type="color"
         // Wichtig: Farbfeld muss den normalisierten Wert erhalten, um richtig zu funktionieren.
         value={normalized || "#FFFFFF"}
         // FIX 3: Bei Änderung den normalisierten Wert an den State übergeben.
-        onChange={(e) => onChange(e.target.value)}
+        // Bei Änderung des Farbfeldes ist der Wert immer ein valider HEX-Wert.
+        onChange={(e) => {
+            const hexValue = e.target.value;
+            onChange(hexValue.toUpperCase());
+        }}
         className="h-10 w-16 touch-manipulation" 
         aria-label={`${label} (Farbfeld)`}
         title="Farbfeld – klick zum Wählen"
@@ -303,7 +306,7 @@ const ColorRow = ({ label, value, onChange, contrast }) => {
         onChange={(e) => {
           const raw = e.target.value;
           // Korrektur: Wir setzen den normalisierten Wert in den State, wenn er valide ist.
-          // Das behebt das Problem, dass die Farbfeld-Wahl überschrieben wird.
+          // Hier den normalisierten Wert setzen, um die Synchronisation zu gewährleisten.
           const norm = toHex6(raw);
           onChange(norm || raw); 
         }}
@@ -335,6 +338,41 @@ const ColorRow = ({ label, value, onChange, contrast }) => {
 };
 
 /* ------------ Promptbuilder ------------ */
+
+// FIX 1: Neue Tonalität/Ästhetik/Form-Arrays
+const TONALITAET_ADJEKTIVE = [
+    "präzise", "souverän", "klar", "fokussiert", "selbstbewusst", "respektvoll", "zurückhaltend", "pointiert", "glaubwürdig", "inspirierend"
+];
+
+const VISUELLE_AESTHETIK_ADJEKTIVE = [
+    "puristisch", "reduziert", "ikonisch", "zeitlos", "progressiv", "futuristisch", "skulptural", "geometrisch", "ausbalanciert", "modular", "kohärent", "konsequent", "kuratiert", "edel", "raffiniert"
+];
+
+const FARBE_FINISH_ADJEKTIVE = [
+    "monochrom", "gedeckt", "gesättigt", "metallisch", "matt", "samtig", "hochglänzend", "warm-kühl ausbalanciert"
+];
+
+const FORM_ADJEKTIVE = [
+    "aerodynamisch", "schlank", "kantig-präzise", "fließend", "kompakt", "minimalistisch", "harmonisch"
+];
+
+const SERVICE_ADJEKTIVE = [
+    "human-zentriert", "empathisch", "proaktiv", "verlässlich", "diskret", "exklusiv", "maßgeschneidert"
+];
+
+const ALL_STIL_ADJEKTIVE = [
+    ...new Set([
+        // Bestehende Stiladjektive (minimalistisch, elegant, etc.) beibehalten, sofern sie nicht doppelt sind
+        "minimalistisch", "elegant", "verspielt", "futuristisch", "vintage", "technisch", "organisch", "geometrisch", "freundlich", "professionell", "exklusiv", "dynamisch",
+        // Neue Adjektive hinzufügen
+        ...TONALITAET_ADJEKTIVE,
+        ...VISUELLE_AESTHETIK_ADJEKTIVE,
+        ...FARBE_FINISH_ADJEKTIVE,
+        ...FORM_ADJEKTIVE,
+        ...SERVICE_ADJEKTIVE
+    ])
+];
+
 
 function buildPrompt(s) {
   const parts = [];
@@ -385,16 +423,19 @@ function buildPrompt(s) {
   if (s.typo.stil || s.typo.details) parts.push(`Typografie: ${[s.typo.stil, s.typo.details].filter(Boolean).join("; ")}.`);
 
   parts.push("Anforderungen: minimalistisch, klar erkennbar, skalierbar, zeitlos, hohe Lesbarkeit. Vermeide übermäßige Details; setze auf klare geometrische Formen und flache Farben.");
-  parts.push("Ausgabe auf weißem Hintergrund (rein weiß). Liefere 1–3 Varianten mit geringfügigen Stil- oder Kompositionsunterschieden.");
-  parts.push("Wenn Text enthalten ist: korrekte Schreibweise des Markennamens, keine Fantasyschrift nur der Optik wegen.");
-
+  parts.push("Ausgabe auf weißem Hintergrund (rein weiß).");
+  // FIX 2: Entfernte Zeilen (Liefere 1–3 Varianten...)
+  
   const text = parts
     .filter(Boolean)
     .map((p) => String(p).trim())
     .filter((p) => p.length > 0)
     .join("\n")
     .replace(/\n{3,}/g, "\n\n");
-  return text;
+  
+  // FIX 2: Letzte Zeile (Keine Fantasyschrift nur der Optik wegen.) entfernt
+  return text.replace("Wenn Text enthalten ist: korrekte Schreibweise des Markennamens, keine Fantasyschrift nur der Optik wegen.", 
+                      "Wenn Text enthalten ist: korrekte Schreibweise des Markennamens.");
 }
 
 /* ------------ Hauptkomponente ------------ */
@@ -468,16 +509,13 @@ export default function App() {
   };
 
   const prompt = useMemo(() => buildPrompt(state), [state]);
-  const compactPrompt = useMemo(() => {
-    const lines = prompt.split("\n");
-    const head = lines.slice(0, 5).join("\n");
-    return lines.length > 5 ? head + "\n…" : head;
-  }, [prompt]);
+  
+  // FIX 3: Entfernte den compactPrompt Block komplett.
+  const compactPrompt = ""; 
 
   const copyPrompt = async () => {
     try {
       await navigator.clipboard.writeText(prompt);
-      // FIX 1: Emojis entfernt
       setCopyMsg("Prompt kopiert!");
     } catch {
       setCopyMsg("Kopieren fehlgeschlagen – bitte manuell markieren");
@@ -846,23 +884,10 @@ export default function App() {
                   ))}
                 </div>
               </Section>
-              <Section title="Stiladjektive" info="Wähle 2–5 Adjektive">
+              <Section title="Stiladjektive" info="Wähle 2–10 Adjektive (Tonalität, Ästhetik, Finish, Form, Service)">
                 <ChipSelect
                   name="adjektive"
-                  options={[
-                    "minimalistisch",
-                    "elegant",
-                    "verspielt",
-                    "futuristisch",
-                    "vintage",
-                    "technisch",
-                    "organisch",
-                    "geometrisch",
-                    "freundlich",
-                    "professionell",
-                    "exklusiv",
-                    "dynamisch",
-                  ]}
+                  options={ALL_STIL_ADJEKTIVE}
                   values={state.stil.adjektive}
                   onChange={(adjektive) => setState((p) => ({ ...p, stil: { ...p.stil, adjektive } }))}
                 />
@@ -950,17 +975,13 @@ export default function App() {
               {/* Hinzugefügter Prompt-Schritt am Ende */}
               <StepHeader step={total} total={total} title="Zusammenfassung & Prompt" subtitle="Kopieren & weiterverwenden" />
               
-              <Section title="Live-Prompt (kompakt)">
-                <Textarea rows={6} value={compactPrompt} readOnly className="font-mono bg-gray-900 border-gray-700 text-white" spellCheck={false} />
-                <p className="text-xs text-gray-500">Hinweis: Vollständige Version unten – diese Kurzansicht ist zum schnellen Prüfen gedacht.</p>
-              </Section>
-
+              {/* FIX 3: Live-Prompt (kompakt) Block entfernt */}
+              
               <Section title="Vollständiger Prompt">
                 <Textarea rows={12} value={prompt} readOnly className="font-mono bg-gray-900 border-gray-700 text-white" spellCheck={false} />
                 <div className="flex items-center gap-2 flex-wrap">
                   <Button onClick={copyPrompt} className="text-white" style={{ backgroundColor: MOSAIK_PRIMARY }}>
                     <Copy className="h-4 w-4 mr-2" />
-                    {/* FIX 1: Emojis entfernt */}
                     {copyMsg.includes("kopiert") ? "Kopiert!" : "In Zwischenablage kopieren"}
                   </Button>
                   <Badge variant="secondary" className="bg-gray-700 text-gray-300">Nur Textausgabe – manuell in KI einfügen</Badge>
