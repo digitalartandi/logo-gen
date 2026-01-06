@@ -7,12 +7,58 @@ import {
 } from "lucide-react";
 import { Button, Card, CardContent, CardHeader, CardTitle, Input, Textarea, Badge } from "./ui";
 
+/* ------------ Logic: Semantic Mappings (The "Brain") ------------ */
+
+// Übersetzt einfache Adjektive in präzise Design-Instruktionen für High-End KIs
+const DESIGN_MAPPINGS = {
+  // Persönlichkeit & Stil
+  "minimalistisch": "use negative space, reduce to essential lines, clean geometry, 'less is more' approach",
+  "elegant": "fine lines, high contrast, sophisticated balance, serif nuances, luxury aesthetic",
+  "verspielt": "organic shapes, dynamic composition, joyful curves, friendly geometry, approachable",
+  "futuristisch": "tech-forward, motion lines, cyber-aesthetic, neon-accents, progressive forms",
+  "vintage": "retro-texture hints, classic badges, timeless typography, heritage feel",
+  "technisch": "precise grids, nodes, circuit-inspired, architectural lines, structured",
+  "organisch": "natural flowing lines, leaf/nature motifs, asymmetry, soft edges",
+  "geometrisch": "sacred geometry, bauhaus influence, mathematical precision, sharp angles",
+  "präzise": "exact grid alignment, sharp execution, professional engineering look",
+  "souverän": "bold strokes, stable base, centered composition, authority",
+  "ikonisch": "memorable silhouette, apple-like simplicity, works at 16x16px",
+  "zeitlos": "avoid trends, classic proportions, golden ratio construction",
+  "progressiv": "forward momentum, italicized motion, arrow motifs, upward trends",
+  "monochrom": "strong black/white balance, stencil capability, high ink density",
+  "matt": "soft muted finish, sophisticated subtlety",
+  "hochglänzend": "implies premium finish, liquid surfaces (translated to vector style)",
+  "modern": "sans-serif priority, current zeitgeist, flat design 2.0",
+  "freundlich": "approachable, rounded terminals, warm vibe, smiling curves",
+  "seriös": "structured, stable, trust-inducing, dark blue/grey undertones implication",
+  "luxuriös": "gold/silver implication, lots of breathing room (whitespace), elite feel",
+  "bodenständig": "heavy weights, solid foundation, earthy connection",
+  "kreativ": "unexpected juxtaposition, clever negative space usage, artistic flair",
+  
+  // Werte
+  "Vertrauen": "shield or pillar motifs, symmetry, stable blue/grey psychology",
+  "Qualität": "seal-like precision, star motifs, diamond sharpness",
+  "Innovation": "lightbulb abstraction, spark, upward arrow, rocket abstraction",
+  "Nachhaltigkeit": "leaf, cycle, earth, infinite loop, green psychology",
+  "Premium": "crown, diamond, crest, serif typography",
+  "Mut": "lion, fire, bold thick lines, high impact",
+  "Transparenz": "overlapping shapes, glass-like opacity (vectorized), open circles",
+  "Effizienz": "speed lines, checkmarks, direct paths, minimal clutter"
+};
+
+const LOGOTYPE_MAPPINGS = {
+  "Wortmarke": "Logotype only. Focus on custom typography, kerning, and unique letter modification. No separate icon.",
+  "Bildmarke": "Logomark only. A standalone symbol or icon without text. Strong visual metaphor.",
+  "Wort-Bild": "Combination Mark. A balanced pairing of a symbol/icon and the brand name typography.",
+  "Emblem": "Emblem style. Text contained inside a shape/badge. Starbucks or crest style.",
+  "Abstrakt": "Abstract mark. Non-literal shape representing the brand feelings through geometry."
+};
+
 /* ------------ Utils & Config ------------ */
 
-const STORAGE_KEY = "mosaik-logo-state-pro-v1";
+const STORAGE_KEY = "mosaik-logo-state-pro-v2-smart"; // Neuer Key für neue Logik
 const PRIMARY_COLOR = "#6F00FF";
 
-// Haptic Feedback Helper
 const vibrate = (pattern = 10) => {
   if (typeof navigator !== "undefined" && navigator.vibrate) navigator.vibrate(pattern);
 };
@@ -71,7 +117,7 @@ const contrastWithWhite = (anyColor) => {
     const hex = toHex6(anyColor);
     if (!hex) return null;
     const L1 = relLuminance(hexToRgb(hex));
-    const L2 = 1; // White
+    const L2 = 1; 
     const ratio = (Math.max(L1, L2) + 0.05) / (Math.min(L1, L2) + 0.05);
     return Number(ratio.toFixed(2));
   } catch { return null; }
@@ -113,7 +159,7 @@ function usePersistentState() {
   return { state, setState, reset, clearStorage };
 }
 
-/* ------------ Components ------------ */
+/* ------------ Components (Visuals Unchanged) ------------ */
 
 const MosaikLogo = () => (
     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 372.017 78.581" className="h-6 w-auto">
@@ -196,49 +242,92 @@ const ColorRow = ({ label, value, onChange, contrast }) => {
   );
 };
 
-/* ------------ Prompt Logic (Unchanged but cleaned) ------------ */
+/* ------------ ULTRA-SMART PROMPT BUILDER (Next-Gen AI Optimized) ------------ */
+// Dieser Builder nutzt Chain-of-Thought Struktur für GPT-5/Gemini 3
 
-// Adjektiv-Listen... (gekürzt für Übersicht, hier müssen alle Listen aus dem Original rein)
-const ALL_STIL_ADJEKTIVE = [
-    "minimalistisch", "elegant", "verspielt", "futuristisch", "vintage", "technisch", "organisch", "geometrisch", 
-    "präzise", "souverän", "ikonisch", "zeitlos", "progressiv", "monochrom", "matt", "hochglänzend"
-];
+const ALL_STIL_ADJEKTIVE = Object.keys(DESIGN_MAPPINGS);
 
 function buildPrompt(s) {
-  // Logic identisch zum Original, nur String-Building
-  const parts = [];
+  // 1. Kontext & Rolle
+  const parts = [
+    `# Role: Expert Brand Identity Designer`,
+    `# Task: Create a high-end, vector-based logo.`,
+    `---`,
+    `## 1. BRAND CONTEXT`
+  ];
+
+  // Daten aufbereiten
   const name = s.meta.name?.trim() || "[Markenname]";
-  const branche = (s.meta.branche === "Sonstige (Freitext)" ? s.meta.brancheOther : s.meta.branche) || "[Branche]";
+  const branche = (s.meta.branche === "Sonstige (Freitext)" ? s.meta.brancheOther : s.meta.branche) || "General Business";
   
-  parts.push(`Erstelle ein professionelles, vektorähnliches Logo für "${name}" (Branche: ${branche}).`);
-  if (s.meta.slogan) parts.push(`Slogan: "${s.meta.slogan}".`);
-  if (s.meta.beschreibung) parts.push(`Kontext: ${s.meta.beschreibung}`);
+  parts.push(`Name: "${name}"`);
+  if (s.meta.slogan) parts.push(`Slogan: "${s.meta.slogan}" (Integrate only if legible, otherwise ignore)`);
+  parts.push(`Industry: ${branche}`);
+  if (s.meta.beschreibung) parts.push(`Context: ${s.meta.beschreibung}`);
 
   const audience = [s.zielgruppe.b2, s.zielgruppe.beschreibung].filter(Boolean).join(", ");
-  if (audience) parts.push(`Zielgruppe: ${audience} ${s.zielgruppe.usecases ? `(Use-Cases: ${s.zielgruppe.usecases})` : ""}.`);
-
-  if (s.wettbewerb.differenzierung) parts.push(`USP/Differenzierung: ${s.wettbewerb.differenzierung}.`);
-
-  if (s.werte.values?.length) parts.push(`Werte: ${s.werte.values.join(", ")}.`);
-  if (s.werte.persoenlichkeit?.length) parts.push(`Personality: ${s.werte.persoenlichkeit.join(", ")}.`);
+  if (audience) parts.push(`Target Audience: ${audience}`);
   
-  if (s.story.enabled && s.story.text) parts.push(`Story-Hintergrund: ${s.story.text}`);
-
-  if (s.stil.logotyp) parts.push(`Logotyp: ${s.stil.logotyp}.`);
-  if (s.stil.adjektive?.length) parts.push(`Stilistik: ${s.stil.adjektive.join(", ")}.`);
-  if (s.stil.referenzen) parts.push(`Visuelle Referenz: ${s.stil.referenzen}.`);
-
-  const farbBits = [];
-  if (s.farben.primary) farbBits.push(`Primär ${toHex6(s.farben.primary) || s.farben.primary}`);
-  if (s.farben.secondary) farbBits.push(`Sekundär ${toHex6(s.farben.secondary) || s.farben.secondary}`);
-  if (s.farben.verbot) farbBits.push(`No-Go: ${s.farben.verbot}`);
-  if (farbBits.length) parts.push(`Farben: ${farbBits.join(", ")}.`);
-
-  if (s.typo.stil) parts.push(`Typo: ${s.typo.stil} ${s.typo.details ? `(${s.typo.details})` : ""}.`);
-
-  parts.push("Output: Minimalistisch, High-End Vektor-Stil, weißer Hintergrund (rein weiß #FFFFFF). Hoher Kontrast, keine unnötigen Details, perfekt skalierbar.");
+  // 2. Semantische Synthese (Der "Smart"-Teil)
+  parts.push(``);
+  parts.push(`## 2. DESIGN STRATEGY (SEMANTIC TRANSLATION)`);
   
-  return parts.filter(Boolean).join("\n\n");
+  // Werte übersetzen
+  if (s.werte.values?.length) {
+    const valueInstructions = s.werte.values.map(v => DESIGN_MAPPINGS[v] || v).join("; ");
+    parts.push(`Core Values Visualized: ${valueInstructions}`);
+  }
+  
+  // Persönlichkeit übersetzen
+  if (s.werte.persoenlichkeit?.length) {
+    const persInstructions = s.werte.persoenlichkeit.map(p => DESIGN_MAPPINGS[p] || p).join("; ");
+    parts.push(`Personality & Vibe: ${persInstructions}`);
+  }
+
+  if (s.wettbewerb.differenzierung) parts.push(`Differentiation/USP: ${s.wettbewerb.differenzierung}`);
+
+  // 3. Technische Konstruktion
+  parts.push(``);
+  parts.push(`## 3. VISUAL CONSTRUCTION`);
+  
+  const logotypeInst = LOGOTYPE_MAPPINGS[s.stil.logotyp] || "Logomark and typography balanced.";
+  parts.push(`Logo Type: ${s.stil.logotyp} -> ${logotypeInst}`);
+  
+  if (s.stil.adjektive?.length) {
+    const styleDeep = s.stil.adjektive.map(a => DESIGN_MAPPINGS[a] || a).join(" + ");
+    parts.push(`Aesthetic Direction: ${styleDeep}`);
+  }
+  
+  if (s.story.enabled && s.story.text) parts.push(`Story Inspiration: "${s.story.text}"`);
+
+  // Farben mit technischer Anweisung
+  const colors = [];
+  if (s.farben.primary) colors.push(`Primary: ${toHex6(s.farben.primary) || s.farben.primary}`);
+  if (s.farben.secondary) colors.push(`Secondary: ${toHex6(s.farben.secondary) || s.farben.secondary}`);
+  if (colors.length) {
+    parts.push(`Color Palette: ${colors.join(", ")}`);
+    parts.push(`Color Usage: Use flat colors, no gradients unless specified futuristic.`);
+  }
+  if (s.farben.verbot) parts.push(`Negative Constraint (Avoid): ${s.farben.verbot}`);
+
+  // Typo
+  if (s.typo.stil) parts.push(`Typography Style: ${s.typo.stil} ${s.typo.details ? `(${s.typo.details})` : ""}`);
+
+  // 4. Output Parameter (Vector Guard)
+  parts.push(``);
+  parts.push(`## 4. OUTPUT PARAMETERS (CRITICAL)`);
+  parts.push(`- Format: Flat Vector Graphic (SVG style)`);
+  parts.push(`- Background: Pure White (#FFFFFF) - No shadows, no wall textures, no mockups.`);
+  parts.push(`- Detail Level: Medium to Low (Must be scalable to favicon size).`);
+  parts.push(`- Composition: Professional, geometrically balanced, centered.`);
+  parts.push(`- No photo-realistic rendering. No 3D bevels.`);
+
+  // Midjourney spezifisch (optional, aber gut für V6)
+  parts.push(``);
+  parts.push(`--no realistic photo 3d mockup shadow detail noise text-clutter`);
+  parts.push(`--v 6.0 --style raw`);
+  
+  return parts.join("\n");
 }
 
 /* ------------ Main Application ------------ */
@@ -249,7 +338,7 @@ const STEPS = [
   { id: 3, icon: Sparkles, label: "Werte" },
   { id: 4, icon: FileText, label: "Story" },
   { id: 5, icon: Palette, label: "Stil" },
-  { id: 6, icon: Palette, label: "Farben" }, // Icon duplicated but context okay
+  { id: 6, icon: Palette, label: "Farben" }, 
   { id: 7, icon: Type, label: "Typo & Finish" },
 ];
 
@@ -263,7 +352,6 @@ export default function LogoGen() {
   const total = STEPS.length;
   const currentStepInfo = STEPS[step - 1];
 
-  // S22 Optimization: Prevent keyboard from covering inputs by checking window resize
   useEffect(() => {
     window.scrollTo({ top: 0, behavior: "smooth" });
   }, [step]);
@@ -294,7 +382,6 @@ export default function LogoGen() {
     setTimeout(() => setCopyMsg(""), 2000);
   };
 
-  // Import/Export Logic
   const handleExport = () => {
     const blob = new Blob([JSON.stringify(state, null, 2)], { type: "application/json" });
     const url = URL.createObjectURL(blob);
@@ -358,7 +445,7 @@ export default function LogoGen() {
             </div>
         </div>
 
-        {/* Progress Bar (Thin & Elegant) */}
+        {/* Progress Bar */}
         <div className="h-0.5 bg-gray-800 w-full">
           <motion.div 
             className="h-full bg-gradient-to-r from-[#6F00FF] to-[#FF1EFF]"
@@ -531,7 +618,7 @@ export default function LogoGen() {
                   <div>
                     <label className="text-sm text-gray-400 block mb-3">Logotyp</label>
                     <div className="grid grid-cols-2 gap-2">
-                       {["Wortmarke", "Bildmarke", "Wort-Bild", "Emblem", "Abstrakt"].map(t => (
+                       {Object.keys(LOGOTYPE_MAPPINGS).map(t => (
                          <Button 
                             key={t} 
                             variant={state.stil.logotyp === t ? "default" : "outline"} 
@@ -596,11 +683,11 @@ export default function LogoGen() {
                 <Card className="border-[#6F00FF]/50 shadow-[0_0_30px_-10px_rgba(111,0,255,0.3)]">
                   <CardHeader className="bg-gradient-to-r from-[#6F00FF]/10 to-transparent">
                     <CardTitle className="flex items-center gap-2">
-                      <Sparkles className="text-[#6F00FF]" size={18}/> Dein Prompt
+                      <Sparkles className="text-[#6F00FF]" size={18}/> High-End Prompt (GPT-5/Gemini-3)
                     </CardTitle>
                   </CardHeader>
                   <CardContent className="pt-4">
-                    <div className="bg-black/50 p-4 rounded-xl border border-white/10 font-mono text-sm text-gray-300 max-h-60 overflow-y-auto mb-4">
+                    <div className="bg-black/50 p-4 rounded-xl border border-white/10 font-mono text-sm text-gray-300 max-h-60 overflow-y-auto mb-4 whitespace-pre-wrap">
                       {buildPrompt(state)}
                     </div>
                     <Button onClick={copyPrompt} className="w-full h-12 text-base font-semibold shadow-xl shadow-purple-900/20">
@@ -608,7 +695,7 @@ export default function LogoGen() {
                       {copyMsg || "Prompt kopieren"}
                     </Button>
                     <p className="text-center text-xs text-gray-500 mt-3">
-                      Für ChatGPT, Midjourney oder DALL-E optimiert.
+                      Optimiert für maximale Vektor-Qualität & Design-Verständnis.
                     </p>
                   </CardContent>
                 </Card>
