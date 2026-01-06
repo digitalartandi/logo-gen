@@ -7,56 +7,56 @@ import {
 } from "lucide-react";
 import { Button, Card, CardContent, CardHeader, CardTitle, Input, Textarea, Badge } from "./ui";
 
-/* ------------ Logic: Semantic Mappings (The "Brain") ------------ */
+/* ------------ Logic: 2026 Reasoning Mappings (GPT-5.2 / Gemini 3) ------------ */
 
-// Übersetzt einfache Adjektive in präzise Design-Instruktionen für High-End KIs
+// Wir nutzen "Chain-of-Thought" Trigger für die neuen Reasoning-Engines
 const DESIGN_MAPPINGS = {
   // Persönlichkeit & Stil
-  "minimalistisch": "use negative space, reduce to essential lines, clean geometry, 'less is more' approach",
-  "elegant": "fine lines, high contrast, sophisticated balance, serif nuances, luxury aesthetic",
-  "verspielt": "organic shapes, dynamic composition, joyful curves, friendly geometry, approachable",
-  "futuristisch": "tech-forward, motion lines, cyber-aesthetic, neon-accents, progressive forms",
-  "vintage": "retro-texture hints, classic badges, timeless typography, heritage feel",
-  "technisch": "precise grids, nodes, circuit-inspired, architectural lines, structured",
-  "organisch": "natural flowing lines, leaf/nature motifs, asymmetry, soft edges",
-  "geometrisch": "sacred geometry, bauhaus influence, mathematical precision, sharp angles",
-  "präzise": "exact grid alignment, sharp execution, professional engineering look",
-  "souverän": "bold strokes, stable base, centered composition, authority",
-  "ikonisch": "memorable silhouette, apple-like simplicity, works at 16x16px",
-  "zeitlos": "avoid trends, classic proportions, golden ratio construction",
-  "progressiv": "forward momentum, italicized motion, arrow motifs, upward trends",
-  "monochrom": "strong black/white balance, stencil capability, high ink density",
-  "matt": "soft muted finish, sophisticated subtlety",
-  "hochglänzend": "implies premium finish, liquid surfaces (translated to vector style)",
-  "modern": "sans-serif priority, current zeitgeist, flat design 2.0",
-  "freundlich": "approachable, rounded terminals, warm vibe, smiling curves",
-  "seriös": "structured, stable, trust-inducing, dark blue/grey undertones implication",
-  "luxuriös": "gold/silver implication, lots of breathing room (whitespace), elite feel",
-  "bodenständig": "heavy weights, solid foundation, earthy connection",
-  "kreativ": "unexpected juxtaposition, clever negative space usage, artistic flair",
+  "minimalistisch": "Use the 'Less is More' principle. Focus on negative space and single-stroke geometry. Reduce visual noise to zero.",
+  "elegant": "Apply high-contrast serif aesthetics (Didone style). Use sophisticated fine lines and balanced kerning. Luxury feel.",
+  "verspielt": "Utilize 'Squircle' geometry and soft organic curves. Color palette should vibrate. Dynamic, non-static composition.",
+  "futuristisch": "Cyber-physical aesthetic. Neon accents, glitch-art nuances, motion blur lines, progressive asymmetry.",
+  "vintage": "Heritage texture simulation. Stamp-style roughness, etching lines, timeless badges.",
+  "technisch": "Blueprint aesthetic. Construction lines, nodes, precise 45/90 degree angles, circuit metaphors.",
+  "organisch": "Biomimetic shapes. Fibonacci spirals, leaf structures, fluid transitions, no hard corners.",
+  "geometrisch": "Bauhaus principles. Fundamental shapes (triangle, circle, square) combined. Mathematical precision.",
+  "präzise": "Swiss Design Style. Grid-based layout, absolute clarity, Helvetica-like neutrality.",
+  "souverän": "Heavy weight structures. Centered, stable, grounded composition. Avoid floating elements.",
+  "ikonisch": "App-Icon ready. Must be legible at 16x16 pixels. Focus on silhouette strength.",
+  "zeitlos": "Avoid current trends (like gradients or 3D). Stick to classic heraldry rules simplified for modern era.",
+  "progressiv": "Forward momentum (italicized angles). Arrow motifs pointing up/right. Velocity lines.",
+  "monochrom": "High ink-trap contrast. Stencil-ready. Pure black and white balance.",
+  "matt": "Soft-touch visual tactile feel. Low specular highlights. Pastel-adjacent logic.",
+  "hochglänzend": "Skeuomorphic glass elements (Glassmorphism 2.0). Refraction simulations, liquid metal surfaces.",
+  "modern": "Neo-Grotesque typography. Flat 2.0 design. Vibrant but controlled colors.",
+  "freundlich": "Smiling curves. Rounded terminals on fonts. Warm color temperature.",
+  "seriös": "Institutional stability. Column-like structures. Dark, saturated cool colors.",
+  "luxuriös": "Whitespace is the main element. Gold/Platinum metallic implications. Serif dominance.",
+  "bodenständig": "Earth tones. Heavy slab-serifs. Block-like stability.",
+  "kreativ": "Escher-like impossible geometry. Unexpected negative space usage. Breaking the grid.",
   
   // Werte
-  "Vertrauen": "shield or pillar motifs, symmetry, stable blue/grey psychology",
-  "Qualität": "seal-like precision, star motifs, diamond sharpness",
-  "Innovation": "lightbulb abstraction, spark, upward arrow, rocket abstraction",
-  "Nachhaltigkeit": "leaf, cycle, earth, infinite loop, green psychology",
-  "Premium": "crown, diamond, crest, serif typography",
-  "Mut": "lion, fire, bold thick lines, high impact",
-  "Transparenz": "overlapping shapes, glass-like opacity (vectorized), open circles",
-  "Effizienz": "speed lines, checkmarks, direct paths, minimal clutter"
+  "Vertrauen": "Visual Metaphor: Shield, Pillar, Handshake, Symmetric Balance.",
+  "Qualität": "Visual Metaphor: Seal, Star, Diamond, Laser-sharp edges.",
+  "Innovation": "Visual Metaphor: Lightbulb (abstracted), Spark, Rocket, Upward trajectory.",
+  "Nachhaltigkeit": "Visual Metaphor: Mobius strip, Leaf, Roots, Cycle, Earth.",
+  "Premium": "Visual Metaphor: Crown, Crest, Monogram, Laurel.",
+  "Mut": "Visual Metaphor: Lion, Fire, Cliffs, Bold thick strokes.",
+  "Transparenz": "Visual Metaphor: Overlapping transparent layers (multiply effect), Open circles.",
+  "Effizienz": "Visual Metaphor: Fast lines, Checkmark, Direct path, Arrow."
 };
 
 const LOGOTYPE_MAPPINGS = {
-  "Wortmarke": "Logotype only. Focus on custom typography, kerning, and unique letter modification. No separate icon.",
-  "Bildmarke": "Logomark only. A standalone symbol or icon without text. Strong visual metaphor.",
-  "Wort-Bild": "Combination Mark. A balanced pairing of a symbol/icon and the brand name typography.",
-  "Emblem": "Emblem style. Text contained inside a shape/badge. Starbucks or crest style.",
-  "Abstrakt": "Abstract mark. Non-literal shape representing the brand feelings through geometry."
+  "Wortmarke": "Logotype Focus. Custom typography is the hero. No separate icon. Focus on kerning and ligature modification.",
+  "Bildmarke": "Logomark Focus. A standalone symbol/icon. No text in the main graphic. Strong visual mnemonic.",
+  "Wort-Bild": "Combination Mark. Balanced lockup of a symbol and brand name. 50/50 visual weight.",
+  "Emblem": "Emblem/Badge. Text is contained INSIDE the shape. Starbucks/Harley style. Unified container.",
+  "Abstrakt": "Abstract Geometry. Non-literal shape. Represents the *feeling* of the brand via pure form."
 };
 
 /* ------------ Utils & Config ------------ */
 
-const STORAGE_KEY = "mosaik-logo-state-pro-v2-smart"; // Neuer Key für neue Logik
+const STORAGE_KEY = "mosaik-logo-state-gpt5-gemini3"; // Neuer Key für 2026er State
 const PRIMARY_COLOR = "#6F00FF";
 
 const vibrate = (pattern = 10) => {
@@ -159,7 +159,7 @@ function usePersistentState() {
   return { state, setState, reset, clearStorage };
 }
 
-/* ------------ Components (Visuals Unchanged) ------------ */
+/* ------------ Components (Visuals unchanged, premium feel) ------------ */
 
 const MosaikLogo = () => (
     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 372.017 78.581" className="h-6 w-auto">
@@ -242,95 +242,95 @@ const ColorRow = ({ label, value, onChange, contrast }) => {
   );
 };
 
-/* ------------ ULTRA-SMART PROMPT BUILDER (Next-Gen AI Optimized) ------------ */
-// Dieser Builder nutzt Chain-of-Thought Struktur für GPT-5/Gemini 3
+/* ------------ ULTRA-SMART PROMPT BUILDER (GPT-5.2 & Gemini 3 Optimized) ------------ */
 
 const ALL_STIL_ADJEKTIVE = Object.keys(DESIGN_MAPPINGS);
 
 function buildPrompt(s) {
-  // 1. Kontext & Rolle
+  // Nutzung des "System Instructions" Patterns, das bei Gemini 3 und GPT-5.2 am besten funktioniert
   const parts = [
-    `# Role: Expert Brand Identity Designer`,
-    `# Task: Create a high-end, vector-based logo.`,
+    `# SYSTEM INSTRUCTION: ACTIVATE REASONING MODE (GPT-5.2 / Gemini 3 Deep Think)`,
+    `ROLE: Expert Brand Identity Designer & Vector Architect.`,
+    `TASK: Synthesize abstract brand values into a concrete, high-precision SVG-style vector logo.`,
     `---`,
-    `## 1. BRAND CONTEXT`
+    `## PHASE 1: SEMANTIC ANALYSIS (INTERNAL REASONING)`
   ];
 
-  // Daten aufbereiten
-  const name = s.meta.name?.trim() || "[Markenname]";
-  const branche = (s.meta.branche === "Sonstige (Freitext)" ? s.meta.brancheOther : s.meta.branche) || "General Business";
+  // 1. Kontextualisierung
+  const name = s.meta.name?.trim() || "[Brand Name]";
+  const branche = (s.meta.branche === "Sonstige (Freitext)" ? s.meta.brancheOther : s.meta.branche) || "General";
   
-  parts.push(`Name: "${name}"`);
-  if (s.meta.slogan) parts.push(`Slogan: "${s.meta.slogan}" (Integrate only if legible, otherwise ignore)`);
-  parts.push(`Industry: ${branche}`);
-  if (s.meta.beschreibung) parts.push(`Context: ${s.meta.beschreibung}`);
+  parts.push(`SUBJECT: "${name}"`);
+  parts.push(`INDUSTRY: ${branche}`);
+  if (s.meta.slogan) parts.push(`SLOGAN: "${s.meta.slogan}" (Integrate only if typographic balance allows)`);
+  if (s.meta.beschreibung) parts.push(`CONTEXT: ${s.meta.beschreibung}`);
 
   const audience = [s.zielgruppe.b2, s.zielgruppe.beschreibung].filter(Boolean).join(", ");
-  if (audience) parts.push(`Target Audience: ${audience}`);
+  if (audience) parts.push(`TARGET AUDIENCE: ${audience}`);
   
-  // 2. Semantische Synthese (Der "Smart"-Teil)
+  // 2. Semantische Übersetzung (Chain of Thought Trigger)
   parts.push(``);
-  parts.push(`## 2. DESIGN STRATEGY (SEMANTIC TRANSLATION)`);
+  parts.push(`## PHASE 2: VISUAL TRANSLATION STRATEGY`);
+  parts.push(`Analyze the following attributes and translate them into geometric instructions:`);
   
-  // Werte übersetzen
+  // Werte & Persönlichkeit mit neuen Mappings
   if (s.werte.values?.length) {
-    const valueInstructions = s.werte.values.map(v => DESIGN_MAPPINGS[v] || v).join("; ");
-    parts.push(`Core Values Visualized: ${valueInstructions}`);
+    const valueInstructions = s.werte.values.map(v => `- ${v}: ${DESIGN_MAPPINGS[v] || "Standard representation"}`).join("\n");
+    parts.push(`VALUES:\n${valueInstructions}`);
   }
   
-  // Persönlichkeit übersetzen
   if (s.werte.persoenlichkeit?.length) {
-    const persInstructions = s.werte.persoenlichkeit.map(p => DESIGN_MAPPINGS[p] || p).join("; ");
-    parts.push(`Personality & Vibe: ${persInstructions}`);
+    const persInstructions = s.werte.persoenlichkeit.map(p => `- ${p}: ${DESIGN_MAPPINGS[p] || "Standard aesthetic"}`).join("\n");
+    parts.push(`PERSONALITY:\n${persInstructions}`);
   }
 
-  if (s.wettbewerb.differenzierung) parts.push(`Differentiation/USP: ${s.wettbewerb.differenzierung}`);
+  if (s.wettbewerb.differenzierung) parts.push(`USP (Differentiation): ${s.wettbewerb.differenzierung}`);
 
-  // 3. Technische Konstruktion
+  // 3. Konstruktions-Phase
   parts.push(``);
-  parts.push(`## 3. VISUAL CONSTRUCTION`);
+  parts.push(`## PHASE 3: GEOMETRIC CONSTRUCTION`);
   
-  const logotypeInst = LOGOTYPE_MAPPINGS[s.stil.logotyp] || "Logomark and typography balanced.";
-  parts.push(`Logo Type: ${s.stil.logotyp} -> ${logotypeInst}`);
+  const logotypeInst = LOGOTYPE_MAPPINGS[s.stil.logotyp] || "Balanced Icon + Text.";
+  parts.push(`ARCHITECTURE: ${s.stil.logotyp} -> ${logotypeInst}`);
   
   if (s.stil.adjektive?.length) {
     const styleDeep = s.stil.adjektive.map(a => DESIGN_MAPPINGS[a] || a).join(" + ");
-    parts.push(`Aesthetic Direction: ${styleDeep}`);
+    parts.push(`STYLE MATRIX: ${styleDeep}`);
   }
   
-  if (s.story.enabled && s.story.text) parts.push(`Story Inspiration: "${s.story.text}"`);
+  if (s.story.enabled && s.story.text) parts.push(`STORY METAPHOR: "${s.story.text}"`);
 
-  // Farben mit technischer Anweisung
+  // Farben (Hex Codes sind für GPT-5.2/Gemini 3 präzise interpretierbar)
   const colors = [];
   if (s.farben.primary) colors.push(`Primary: ${toHex6(s.farben.primary) || s.farben.primary}`);
   if (s.farben.secondary) colors.push(`Secondary: ${toHex6(s.farben.secondary) || s.farben.secondary}`);
   if (colors.length) {
-    parts.push(`Color Palette: ${colors.join(", ")}`);
-    parts.push(`Color Usage: Use flat colors, no gradients unless specified futuristic.`);
+    parts.push(`COLOR PALETTE: ${colors.join(", ")}`);
+    parts.push(`COLOR APPLICATION: Flat surfaces. No gradients (unless 'futuristic' requested). High contrast for visibility.`);
   }
-  if (s.farben.verbot) parts.push(`Negative Constraint (Avoid): ${s.farben.verbot}`);
+  if (s.farben.verbot) parts.push(`NEGATIVE CONSTRAINT: Do NOT use ${s.farben.verbot}`);
 
   // Typo
-  if (s.typo.stil) parts.push(`Typography Style: ${s.typo.stil} ${s.typo.details ? `(${s.typo.details})` : ""}`);
+  if (s.typo.stil) parts.push(`TYPOGRAPHY: ${s.typo.stil} ${s.typo.details ? `(${s.typo.details})` : ""}`);
 
-  // 4. Output Parameter (Vector Guard)
+  // 4. Output Parameter (Optimized for 2026 Models)
   parts.push(``);
-  parts.push(`## 4. OUTPUT PARAMETERS (CRITICAL)`);
-  parts.push(`- Format: Flat Vector Graphic (SVG style)`);
-  parts.push(`- Background: Pure White (#FFFFFF) - No shadows, no wall textures, no mockups.`);
-  parts.push(`- Detail Level: Medium to Low (Must be scalable to favicon size).`);
-  parts.push(`- Composition: Professional, geometrically balanced, centered.`);
-  parts.push(`- No photo-realistic rendering. No 3D bevels.`);
-
-  // Midjourney spezifisch (optional, aber gut für V6)
+  parts.push(`## PHASE 4: FINAL RENDER SPECIFICATIONS`);
+  parts.push(`1.  **Format**: Flat Vector Graphic style (clean paths, no raster artifacts).`);
+  parts.push(`2.  **Background**: Pure White (#FFFFFF). No mockups, no walls, no paper texture.`);
+  parts.push(`3.  **Simplicity**: Optimize for scale (favicon compatible).`);
+  parts.push(`4.  **Execution**: Precision geometry. Perfect alignment. Professional corporate grade.`);
+  
+  // Specific Flags for Models
   parts.push(``);
-  parts.push(`--no realistic photo 3d mockup shadow detail noise text-clutter`);
-  parts.push(`--v 6.0 --style raw`);
+  parts.push(`[MODEL_FLAGS]`);
+  parts.push(`--no photorealistic --no 3d render --no shadow --no complex details`);
+  parts.push(`--quality high --style raw --v 6.0 (or latest default)`);
   
   return parts.join("\n");
 }
 
-/* ------------ Main Application ------------ */
+/* ------------ Main Application (Flow unchanged) ------------ */
 
 const STEPS = [
   { id: 1, icon: Layers, label: "Basis" },
@@ -387,7 +387,7 @@ export default function LogoGen() {
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = `mosaik-logo-${Date.now()}.json`;
+    a.download = `mosaik-logo-gpt5-${Date.now()}.json`;
     a.click();
     setShowMenu(false);
   };
@@ -683,7 +683,7 @@ export default function LogoGen() {
                 <Card className="border-[#6F00FF]/50 shadow-[0_0_30px_-10px_rgba(111,0,255,0.3)]">
                   <CardHeader className="bg-gradient-to-r from-[#6F00FF]/10 to-transparent">
                     <CardTitle className="flex items-center gap-2">
-                      <Sparkles className="text-[#6F00FF]" size={18}/> High-End Prompt (GPT-5/Gemini-3)
+                      <Sparkles className="text-[#6F00FF]" size={18}/> Optimized for GPT-5.2 / Gemini 3
                     </CardTitle>
                   </CardHeader>
                   <CardContent className="pt-4">
@@ -695,7 +695,7 @@ export default function LogoGen() {
                       {copyMsg || "Prompt kopieren"}
                     </Button>
                     <p className="text-center text-xs text-gray-500 mt-3">
-                      Optimiert für maximale Vektor-Qualität & Design-Verständnis.
+                      Prompt nutzt jetzt Phase-2 Reasoning (Deep Think) für Vektor-Perfektion.
                     </p>
                   </CardContent>
                 </Card>
